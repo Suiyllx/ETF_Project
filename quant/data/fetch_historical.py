@@ -1,8 +1,8 @@
 """
 fetch_historical.py
 ────────────────────
-用 yfinance 拉取主流 ETF 历史日线数据，存为 Parquet 格式。
-yfinance 走 Yahoo Finance，无需账号，稳定性好。
+用 AKShare 拉取主流 ETF 历史日线数据，存为 Parquet 格式。
+AKShare 使用东方财富数据源，无需账号，覆盖全量 A 股 ETF。
 
 用法：
     python -m quant.data.fetch_historical                   # 拉全部，默认近 3 年
@@ -18,10 +18,10 @@ import time
 from pathlib import Path
 from datetime import datetime, timedelta
 
-import yfinance as yf
+import akshare as ak
 import pandas as pd
 
-from quant.utils.etf_list import ETF_CODES, CODE_TO_NAME, _yf_code
+from quant.utils.etf_list import ETF_CODES, CODE_TO_NAME
 
 SAVE_DIR = Path(__file__).parent / "historical"
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -29,28 +29,33 @@ SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 def fetch_one(code: str, start: str, end: str) -> pd.DataFrame:
     """拉取单只 ETF 日线数据。code 为纯数字格式如 '510300'。"""
-    yf_code = _yf_code(code)
-    ticker = yf.Ticker(yf_code)
-    df = ticker.history(start=start, end=end, auto_adjust=True)
+    start_date = start.replace("-", "")
+    end_date   = end.replace("-", "")
 
-    if df.empty:
-        raise ValueError(f"{code}（{yf_code}）无数据，可能 Yahoo Finance 不覆盖此标的")
+    df = ak.fund_etf_hist_em(
+        symbol=code,
+        period="daily",
+        start_date=start_date,
+        end_date=end_date,
+        adjust="qfq",
+    )
 
-    df = df.reset_index()
+    if df is None or df.empty:
+        raise ValueError(f"{code} 无数据，AKShare 可能不覆盖此标的")
+
     df = df.rename(columns={
-        "Date":   "date",
-        "Open":   "open",
-        "High":   "high",
-        "Low":    "low",
-        "Close":  "close",
-        "Volume": "volume",
+        "日期": "date",
+        "开盘": "open",
+        "最高": "high",
+        "最低": "low",
+        "收盘": "close",
+        "成交量": "volume",
     })
 
-    # 只保留需要的列
     keep = [c for c in ["date", "open", "high", "low", "close", "volume"] if c in df.columns]
     df = df[keep].copy()
 
-    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    df["date"] = pd.to_datetime(df["date"])
     df["pct_chg"] = df["close"].pct_change() * 100
     df["code"] = code
     df["name"] = CODE_TO_NAME.get(code, "")
@@ -58,11 +63,11 @@ def fetch_one(code: str, start: str, end: str) -> pd.DataFrame:
     return df
 
 
-def fetch_all(codes: list[str], years: int = 3, skip_existing: bool = False):
+def fetch_all(codes: list, years: int = 3, skip_existing: bool = False):
     end   = datetime.today().strftime("%Y-%m-%d")
     start = (datetime.today() - timedelta(days=365 * years)).strftime("%Y-%m-%d")
 
-    print(f"数据源：Yahoo Finance  |  区间：{start} ~ {end}\n")
+    print(f"数据源：AKShare（东方财富）  |  区间：{start} ~ {end}\n")
 
     success, failed = [], []
     for code in codes:
@@ -84,11 +89,11 @@ def fetch_all(codes: list[str], years: int = 3, skip_existing: bool = False):
             print(f"✗  {e}")
             failed.append((code, str(e)))
 
-        time.sleep(0.5)
+        time.sleep(0.3)
 
     print(f"\n完成：成功 {len(success)} 只，失败 {len(failed)} 只")
     if failed:
-        print("\n失败列表（Yahoo Finance 可能不覆盖部分小众 ETF）：")
+        print("\n失败列表：")
         for code, err in failed:
             print(f"  {code} {CODE_TO_NAME.get(code,'')}: {err}")
     return failed
