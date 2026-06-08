@@ -23,7 +23,7 @@ import pandas as pd
 from quant.data.fetch_historical import load as load_hist
 from quant.utils.etf_list import ETF_CODES
 
-SIGNALS_DIR   = Path(__file__).parent.parent.parent / "signals"
+SIGNALS_DIR   = Path(__file__).parent
 THRESHOLD_FILE = SIGNALS_DIR / "thresholds.json"
 SIGNALS_DIR.mkdir(parents=True, exist_ok=True)
 

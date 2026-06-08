@@ -116,7 +116,8 @@ def load_users() -> list[User]:
     if not USERS_FILE.exists():
         raise FileNotFoundError(f"用户注册表不存在：{USERS_FILE}")
     data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
-    return [User(**u) for u in data if u.get("active", True)]
+    user_keys = {"id", "name", "email", "portfolio_file", "active"}
+    return [User(**{k: v for k, v in u.items() if k in user_keys}) for u in data if u.get("active", True)]
 
 
 def load_portfolio(user: User, price_map: dict[str, float] = None) -> Portfolio:

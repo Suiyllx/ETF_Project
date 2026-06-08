@@ -20,12 +20,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
-import yfinance as yf
+import tushare as ts
+import config
 
 from quant.data.fetch_historical import load as load_hist, SAVE_DIR
 from quant.features.engineer import add_features, get_feature_cols
 from quant.models.trainer import load_model, FORWARD_DAYS
-from quant.utils.etf_list import ETF_CODES, CODE_TO_NAME, _yf_code
+from quant.utils.etf_list import ETF_CODES, CODE_TO_NAME
+
+ts.set_token(config.TUSHARE_TOKEN)
+_pro = ts.pro_api()
+
+
+def _ts_code(code: str) -> str:
+    return f"{code}.SH" if code.startswith(("5", "11")) else f"{code}.SZ"
 
 # 默认信号过滤阈值（可通过 model_config.json 覆盖）
 PROB_THRESHOLD = 0.50
@@ -33,8 +41,8 @@ PROB_THRESHOLD = 0.50
 # 默认黑名单（可通过 model_config.json 覆盖）
 _DEFAULT_BLACKLIST = ["159869", "159766", "159928"]   # 新能源车、旅游、消费
 
-# 候选池文件路径（盘中确认模块读取）
-SIGNALS_DIR = Path(__file__).parent.parent.parent / "signals"
+# 候选池文件路径（与 web_app.py 保持一致：quant/signals/）
+SIGNALS_DIR = Path(__file__).parent
 SIGNALS_DIR.mkdir(parents=True, exist_ok=True)
 CANDIDATE_FILE = SIGNALS_DIR / "candidates.json"
 
@@ -80,20 +88,18 @@ def update_data(code: str) -> pd.DataFrame:
     if start > end:
         return existing  # 已是最新，无需更新
 
-    yf_code = _yf_code(code)
-    ticker = yf.Ticker(yf_code)
-    new_df = ticker.history(start=start, end=end, auto_adjust=True)
+    new_df = ts.pro_bar(
+        ts_code=_ts_code(code), asset="FD", adj="qfq",
+        start_date=start.replace("-", ""), end_date=end.replace("-", ""), freq="D",
+    )
 
-    if new_df.empty:
+    if new_df is None or new_df.empty:
         return existing
 
-    new_df = new_df.reset_index().rename(columns={
-        "Date": "date", "Open": "open", "High": "high",
-        "Low": "low", "Close": "close", "Volume": "volume",
-    })
+    new_df = new_df.rename(columns={"trade_date": "date", "vol": "volume"})
     keep = [c for c in ["date", "open", "high", "low", "close", "volume"] if c in new_df.columns]
     new_df = new_df[keep].copy()
-    new_df["date"] = pd.to_datetime(new_df["date"]).dt.tz_localize(None)
+    new_df["date"] = pd.to_datetime(new_df["date"])
     new_df["pct_chg"] = new_df["close"].pct_change() * 100
     new_df["code"] = code
     new_df["name"] = CODE_TO_NAME.get(code, "")
@@ -188,6 +194,19 @@ def generate_signals(forward: int = FORWARD_DAYS,
     if errors:
         print(f"  [{len(errors)} 只更新失败]")
     print(f"  信号生成完成：{len(signals)} 个做多信号")
+
+    # 清理 NaN（Python float nan 不是合法 JSON）
+    import math
+    def _clean(obj):
+        if isinstance(obj, float) and math.isnan(obj):
+            return None
+        if isinstance(obj, dict):
+            return {k: _clean(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_clean(i) for i in obj]
+        return obj
+
+    signals = _clean(signals)
 
     # 保存候选池供盘中确认模块使用
     payload = {

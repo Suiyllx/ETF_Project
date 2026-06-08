@@ -168,7 +168,7 @@ def _html_daily(signals, forward, portfolio=None, user_name=""):
             prob      = "{:.1%}".format(s["prob_up"])
             bar_w     = str(int(s["prob_up"] * 100))
             close_p   = "{:.2f}".format(s["close"])
-            chg       = s["pct_chg"]
+            chg       = s.get("pct_chg") or 0.0
             chg_str   = ("+" if chg >= 0 else "") + "{:.2f}%".format(chg)
             chg_color = "#22c55e" if chg >= 0 else "#ef4444"
             reason    = s.get("advice_reason", "")
