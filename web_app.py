@@ -161,7 +161,7 @@ def _migrate_users():
         if "password_hash" not in u:
             default_pw = (
                 _web_password() if u.get("role") == "admin"
-                else u.get("id", "changeme")
+                else "gaoqian"
             )
             u["password_hash"] = generate_password_hash(default_pw)
             changed = True
@@ -317,7 +317,7 @@ def api_create_user():
         "portfolio_file": f"portfolios/{user_id}.json",
         "active":         bool(data.get("active", True)),
         "role":           "user",
-        "password_hash":  generate_password_hash(user_id),  # 默认密码 = 用户 ID
+        "password_hash":  generate_password_hash("gaoqian"),  # 默认密码 = gaoqian
     }
     users.append(new_user)
     write_users(users)
