@@ -1,0 +1,19 @@
+# 强制前端源码使用 LF，避免 Windows/Linux 混用导致 Vite 构建报错
+*.vue  text eol=lf
+*.js   text eol=lf
+*.ts   text eol=lf
+*.jsx  text eol=lf
+*.tsx  text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+
+# Python
+*.py   text eol=lf
+
+# Markdown
+*.md   text eol=lf
+
+# Windows scripts 保持 CRLF
+*.ps1  text eol=crlf
+*.bat  text eol=crlf

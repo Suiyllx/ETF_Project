@@ -693,11 +693,10 @@ onMounted(async () => {
   } catch {}
 })
 
-// 快捷填入 ETF（交易弹窗）并自动拉实时价
-async function quickPickTx(code, name) {
-  txForm.etf_code    = code
-  txForm.etf_name    = name || store.etfList[code] || code
-  txPriceSource.value = ''
+// 监听交易弹窗 ETF 代码变化，自动拉实时价（覆盖手动搜索场景）
+watch(() => txForm.etf_code, async (code) => {
+  if (!code || !showTxModal.value) return
+  txPriceSource.value  = ''
   txPriceLoading.value = true
   const rt = await fetchRealtimePrice(code)
   txPriceLoading.value = false
@@ -705,6 +704,13 @@ async function quickPickTx(code, name) {
     txForm.price        = rt.price
     txPriceSource.value = rt.source
   }
+})
+
+// 快捷填入 ETF（交易弹窗）并自动拉实时价
+async function quickPickTx(code, name) {
+  txForm.etf_code    = code
+  txForm.etf_name    = name || store.etfList[code] || code
+  // watch 会自动触发价格拉取，无需重复请求
 }
 
 // 快捷填入 ETF（持仓弹窗）
