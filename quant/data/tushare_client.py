@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from typing import TypeVar, ParamSpec, Callable
 import tushare as ts
 from functools import wraps
+import config
 
 log = logging.getLogger(__name__)
 
@@ -38,10 +39,7 @@ BASE_DELAY   = 2.0   # 首次重试等待（秒），指数退避序列：2 → 
 # ── 单例客户端 ─────────────────────────────────────────────────
 
 class RateLimiter:
-    """Tushare Pro 单例封装，限速 + 超时 + 退避重试。"""
-
     _rate_lock: threading.Lock
-    _init_lock: threading.Lock
 
     def __init__(self):
         self._last_call = 0.0
@@ -100,5 +98,5 @@ def rate_limited(limiter: RateLimiter):
 
 
 # ── 模块级公共接口 ────────────────────────────────────────────
-
+ts.set_token(config.TUSHARE_TOKEN)
 pro_bar = rate_limited(_limiter)(ts.pro_bar)
