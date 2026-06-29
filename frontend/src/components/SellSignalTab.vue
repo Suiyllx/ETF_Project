@@ -2,169 +2,134 @@
   <div>
     <!-- 管理员操作栏 -->
     <div v-if="store.isAdmin" class="flex gap-2 mb-5">
-      <button class="text-sm font-medium px-4 py-2 rounded-xl text-white transition shadow-sm flex items-center gap-2"
-              style="background:linear-gradient(135deg,#7f1d1d,#dc2626)"
-              :disabled="runningSellGen"
-              @click="runSellGenerator">
-        <span v-if="runningSellGen" class="animate-spin inline-block">⟳</span>
-        {{ runningSellGen ? '生成中…' : '⚡ 重新生成卖出信号' }}
-      </button>
-      <button class="text-sm font-medium px-4 py-2 rounded-xl text-white transition shadow-sm flex items-center gap-2"
-              style="background:linear-gradient(135deg,#78350f,#d97706)"
-              :disabled="runningMonitor"
-              @click="runPriceMonitor">
-        <span v-if="runningMonitor" class="animate-spin inline-block">⟳</span>
-        {{ runningMonitor ? '监控中…' : '📡 立即盘中监控' }}
-      </button>
+      <BaseButton variant="red" :disabled="runningSellGen" @click="runSellGenerator">
+        <Loader2 v-if="runningSellGen" :size="14" class="animate-spin" />
+        <Zap v-else :size="14" />
+        {{ runningSellGen ? '生成中…' : '重新生成卖出信号' }}
+      </BaseButton>
+      <BaseButton variant="primary" :disabled="runningMonitor" @click="runPriceMonitor">
+        <Loader2 v-if="runningMonitor" :size="14" class="animate-spin" />
+        <Radio v-else :size="14" />
+        {{ runningMonitor ? '监控中…' : '立即盘中监控' }}
+      </BaseButton>
     </div>
 
     <!-- 收盘卖出建议 -->
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-4">
-        <h2 class="font-bold text-gray-800 text-base">📋 收盘卖出建议</h2>
-        <span v-if="sellSignals.trade_date" class="text-xs px-2 py-0.5 rounded-full"
-              style="background:#fef2f2;color:#b91c1c">
-          {{ sellSignals.trade_date }}
-        </span>
-        <span class="text-xs px-2 py-0.5 rounded-full" style="background:#f1f5f9;color:#64748b">
-          {{ sellSignals.signals?.length ?? 0 }} 条
-        </span>
-        <span v-if="sellSignals.generated_at" class="text-xs text-gray-400 ml-auto">
+        <h2 class="font-bold text-label-1 text-base flex items-center gap-2">
+          <ClipboardList :size="17" class="text-label-2" /> 收盘卖出建议
+        </h2>
+        <Badge v-if="sellSignals.trade_date" tone="red" :label="sellSignals.trade_date" />
+        <Badge tone="gray" :label="(sellSignals.signals?.length ?? 0) + ' 条'" />
+        <span v-if="sellSignals.generated_at" class="text-xs text-label-2 ml-auto">
           生成于 {{ sellSignals.generated_at?.slice(11, 16) }}
         </span>
       </div>
 
-      <div v-if="loadingSell" class="py-10 text-center text-gray-400">加载中…</div>
-      <div v-else-if="errSell" class="py-6 text-center text-red-500 text-sm">{{ errSell }}</div>
-      <div v-else-if="!sellSignals.signals?.length"
-           class="text-center py-14 rounded-2xl"
-           style="background:#f8fafc;border:1px solid #f1f5f9">
-        <div class="text-4xl mb-3">✅</div>
-        <p class="text-gray-500 font-semibold">暂无卖出建议</p>
-        <p class="text-xs text-gray-400 mt-1">所有持仓均未触及止损/止盈/模型看空阈值</p>
-      </div>
+      <div v-if="loadingSell" class="py-10 text-center text-label-2">加载中…</div>
+      <div v-else-if="errSell" class="py-6 text-center text-sys-red text-sm">{{ errSell }}</div>
+      <BaseCard v-else-if="!sellSignals.signals?.length" class="text-center py-14">
+        <CircleCheck :size="36" class="mx-auto mb-3 text-sys-green opacity-80" />
+        <p class="text-label-1 font-semibold">暂无卖出建议</p>
+        <p class="text-xs text-label-2 mt-1">所有持仓均未触及止损/止盈/模型看空阈值</p>
+      </BaseCard>
       <div v-else class="space-y-3">
-        <div v-for="sig in sellSignals.signals" :key="sig.code + sig.user_id"
-             class="rounded-2xl p-4 bg-white shadow-sm"
-             :style="TRIGGER_CARD[sig.trigger] ?? 'border-l:4px solid #94a3b8'">
+        <BaseCard v-for="sig in sellSignals.signals" :key="sig.code + sig.user_id" class="p-4"
+                  :style="TRIGGER_BORDER[sig.trigger] ?? 'border-left:3px solid var(--label-3)'">
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm"
-                 style="background:linear-gradient(135deg,#7f1d1d,#dc2626)">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 bg-sys-redDim text-sys-red">
               {{ sig.code?.slice(-2) }}
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-semibold text-gray-800 text-sm">{{ sig.name }}</span>
-                <span class="text-xs text-gray-400">{{ sig.code }}</span>
-                <span v-if="sig.user_name" class="text-xs px-2 py-0.5 rounded-full"
-                      style="background:#eff6ff;color:#1e3a8a">
-                  {{ sig.user_name }}
-                </span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                      :style="TRIGGER_STYLE[sig.trigger] ?? TRIGGER_STYLE.MODEL_SELL">
-                  {{ TRIGGER_LABEL[sig.trigger] ?? sig.trigger }}
-                </span>
+                <span class="font-semibold text-label-1 text-sm">{{ sig.name }}</span>
+                <span class="text-xs text-label-2">{{ sig.code }}</span>
+                <Badge v-if="sig.user_name" tone="blue" :label="sig.user_name" />
+                <Badge :type="sig.trigger" />
               </div>
-              <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">{{ sig.trigger_reason }}</p>
+              <p class="text-xs text-label-2 mt-1.5 leading-relaxed">{{ sig.trigger_reason }}</p>
               <div class="flex gap-4 mt-2">
                 <div class="text-xs">
-                  <span class="text-gray-400">成本价 </span>
-                  <span class="font-medium text-gray-700">¥{{ sig.cost_price?.toFixed(3) ?? '—' }}</span>
+                  <span class="text-label-2">成本价 </span>
+                  <span class="font-medium text-label-1">¥{{ sig.cost_price?.toFixed(3) ?? '—' }}</span>
                 </div>
                 <div class="text-xs">
-                  <span class="text-gray-400">参考价 </span>
-                  <span class="font-medium text-gray-700">¥{{ sig.current_price?.toFixed(3) ?? '—' }}</span>
+                  <span class="text-label-2">参考价 </span>
+                  <span class="font-medium text-label-1">¥{{ sig.current_price?.toFixed(3) ?? '—' }}</span>
                 </div>
-                <div class="text-xs font-bold"
-                     :style="(sig.unrealized_pct ?? 0) >= 0 ? 'color:#059669' : 'color:#e11d48'">
+                <div class="text-xs font-bold" :class="(sig.unrealized_pct ?? 0) >= 0 ? 'text-sys-green' : 'text-sys-red'">
                   {{ (sig.unrealized_pct ?? 0) >= 0 ? '+' : '' }}{{ ((sig.unrealized_pct ?? 0) * 100).toFixed(2) }}%
                 </div>
-                <div v-if="sig.tech_warnings?.length" class="text-xs text-amber-600 flex items-center gap-1">
-                  ⚠ {{ sig.tech_warnings.join(' · ') }}
+                <div v-if="sig.tech_warnings?.length" class="text-xs text-sys-orange flex items-center gap-1">
+                  <TriangleAlert :size="13" /> {{ sig.tech_warnings.join(' · ') }}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </BaseCard>
       </div>
     </div>
 
     <!-- 盘中价格告警 -->
     <div>
       <div class="flex items-center gap-3 mb-4">
-        <h2 class="font-bold text-gray-800 text-base">🔔 盘中价格告警</h2>
-        <span class="text-xs px-2 py-0.5 rounded-full"
-              :style="activeAlerts.length ? 'background:#fef2f2;color:#b91c1c' : 'background:#f1f5f9;color:#64748b'">
-          {{ activeAlerts.length }} 条未读
-        </span>
-        <button v-if="activeAlerts.length > 1"
-                class="ml-auto text-xs px-3 py-1.5 rounded-xl border transition"
-                style="border-color:#e2e8f0;color:#64748b"
-                :disabled="dismissingAll"
-                @click="dismissAllAlerts">
+        <h2 class="font-bold text-label-1 text-base flex items-center gap-2">
+          <Bell :size="17" class="text-label-2" /> 盘中价格告警
+        </h2>
+        <Badge :tone="activeAlerts.length ? 'red' : 'gray'" :label="activeAlerts.length + ' 条未读'" />
+        <BaseButton v-if="activeAlerts.length > 1" variant="ghost" size="sm" class="ml-auto"
+                    :disabled="dismissingAll" @click="dismissAllAlerts">
           {{ dismissingAll ? '处理中…' : '全部标记已读' }}
-        </button>
+        </BaseButton>
       </div>
 
-      <div v-if="loadingAlerts" class="py-10 text-center text-gray-400">加载中…</div>
-      <div v-else-if="!activeAlerts.length"
-           class="text-center py-14 rounded-2xl"
-           style="background:#f8fafc;border:1px solid #f1f5f9">
-        <div class="text-4xl mb-3">🔕</div>
-        <p class="text-gray-500 font-semibold">暂无盘中告警</p>
-        <p class="text-xs text-gray-400 mt-1">价格监控每 30 分钟运行一次，盘中触发后此处显示</p>
-      </div>
+      <div v-if="loadingAlerts" class="py-10 text-center text-label-2">加载中…</div>
+      <BaseCard v-else-if="!activeAlerts.length" class="text-center py-14">
+        <BellOff :size="36" class="mx-auto mb-3 text-label-2 opacity-60" />
+        <p class="text-label-1 font-semibold">暂无盘中告警</p>
+        <p class="text-xs text-label-2 mt-1">价格监控每 30 分钟运行一次，盘中触发后此处显示</p>
+      </BaseCard>
       <div v-else class="space-y-3">
-        <div v-for="alert in activeAlerts" :key="alert.id"
-             class="rounded-2xl p-4 bg-white shadow-sm"
-             :style="TRIGGER_CARD[alert.trigger] ?? 'border-l:4px solid #94a3b8'">
+        <BaseCard v-for="alert in activeAlerts" :key="alert.id" class="p-4"
+                  :style="TRIGGER_BORDER[alert.trigger] ?? 'border-left:3px solid var(--label-3)'">
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm"
-                 style="background:linear-gradient(135deg,#78350f,#d97706)">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 bg-sys-orangeDim text-sys-orange">
               {{ alert.code?.slice(-2) }}
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-semibold text-gray-800 text-sm">{{ alert.name }}</span>
-                <span class="text-xs text-gray-400">{{ alert.code }}</span>
-                <span v-if="alert.user_name" class="text-xs px-2 py-0.5 rounded-full"
-                      style="background:#eff6ff;color:#1e3a8a">
-                  {{ alert.user_name }}
-                </span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                      :style="TRIGGER_STYLE[alert.trigger] ?? TRIGGER_STYLE.MODEL_SELL">
-                  {{ TRIGGER_LABEL[alert.trigger] ?? alert.trigger }}
-                </span>
-                <span class="text-xs text-gray-400 ml-auto">{{ alert.timestamp?.slice(11, 16) }}</span>
+                <span class="font-semibold text-label-1 text-sm">{{ alert.name }}</span>
+                <span class="text-xs text-label-2">{{ alert.code }}</span>
+                <Badge v-if="alert.user_name" tone="blue" :label="alert.user_name" />
+                <Badge :type="alert.trigger" />
+                <span class="text-xs text-label-2 ml-auto">{{ alert.timestamp?.slice(11, 16) }}</span>
               </div>
-              <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">{{ alert.trigger_reason }}</p>
+              <p class="text-xs text-label-2 mt-1.5 leading-relaxed">{{ alert.trigger_reason }}</p>
               <div class="flex items-center gap-4 mt-2">
                 <div class="text-xs">
-                  <span class="text-gray-400">成本价 </span>
-                  <span class="font-medium text-gray-700">¥{{ alert.cost_price?.toFixed(3) ?? '—' }}</span>
+                  <span class="text-label-2">成本价 </span>
+                  <span class="font-medium text-label-1">¥{{ alert.cost_price?.toFixed(3) ?? '—' }}</span>
                 </div>
                 <div class="text-xs">
-                  <span class="text-gray-400">实时价 </span>
-                  <span class="font-medium text-gray-700">¥{{ alert.current_price?.toFixed(3) ?? '—' }}</span>
+                  <span class="text-label-2">实时价 </span>
+                  <span class="font-medium text-label-1">¥{{ alert.current_price?.toFixed(3) ?? '—' }}</span>
                 </div>
-                <div class="text-xs font-bold"
-                     :style="(alert.unrealized_pct ?? 0) >= 0 ? 'color:#059669' : 'color:#e11d48'">
+                <div class="text-xs font-bold" :class="(alert.unrealized_pct ?? 0) >= 0 ? 'text-sys-green' : 'text-sys-red'">
                   {{ (alert.unrealized_pct ?? 0) >= 0 ? '+' : '' }}{{ ((alert.unrealized_pct ?? 0) * 100).toFixed(2) }}%
                 </div>
-                <div class="text-xs text-gray-400">
+                <div class="text-xs text-label-2">
                   {{ alert.shares?.toLocaleString() }} 股
                   · {{ alert.unrealized_pnl >= 0 ? '+' : '' }}¥{{ alert.unrealized_pnl?.toFixed(0) }}
                 </div>
-                <button class="ml-auto text-xs px-3 py-1 rounded-lg border transition"
-                        style="border-color:#e2e8f0;color:#94a3b8"
-                        :disabled="dismissingId === alert.id"
-                        @click="dismissAlert(alert.id)">
+                <BaseButton variant="ghost" size="sm" class="ml-auto"
+                            :disabled="dismissingId === alert.id" @click="dismissAlert(alert.id)">
                   {{ dismissingId === alert.id ? '…' : '已读' }}
-                </button>
+                </BaseButton>
               </div>
             </div>
           </div>
-        </div>
+        </BaseCard>
       </div>
     </div>
   </div>
@@ -174,17 +139,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import BaseCard   from './base/BaseCard.vue'
+import BaseButton from './base/BaseButton.vue'
+import Badge      from './base/Badge.vue'
+import {
+  Zap, Radio, ClipboardList, CircleCheck, Bell, BellOff, TriangleAlert, Loader2,
+} from '@lucide/vue'
 
-const TRIGGER_LABEL = { STOP_LOSS: '止损', TAKE_PROFIT: '止盈', MODEL_SELL: '模型看空' }
-const TRIGGER_STYLE = {
-  STOP_LOSS:   'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca',
-  TAKE_PROFIT: 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa',
-  MODEL_SELL:  'background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe',
-}
-const TRIGGER_CARD = {
-  STOP_LOSS:   'border-left:4px solid #ef4444',
-  TAKE_PROFIT: 'border-left:4px solid #f97316',
-  MODEL_SELL:  'border-left:4px solid #8b5cf6',
+const TRIGGER_BORDER = {
+  STOP_LOSS:   'border-left:3px solid var(--sys-red)',
+  TAKE_PROFIT: 'border-left:3px solid var(--sys-orange)',
+  MODEL_SELL:  'border-left:3px solid var(--sys-blue)',
 }
 
 // ── 卖出信号 ──────────────────────────────────────────────────

@@ -1,24 +1,26 @@
 <template>
   <div class="p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-5">🔬 回测结果</h2>
+    <h2 class="text-xl font-bold text-label-1 mb-5 flex items-center gap-2">
+      <FlaskConical :size="20" class="text-label-2" /> 回测结果
+    </h2>
 
-    <div v-if="loading" class="text-center text-gray-400 py-20">加载中…</div>
+    <div v-if="loading" class="text-center text-label-2 py-20">加载中…</div>
 
-    <div v-else-if="!results.length" class="text-center py-24 text-gray-400">
-      <div class="text-5xl">🔬</div>
-      <p class="mt-3 text-lg">暂无回测结果</p>
+    <div v-else-if="!results.length" class="text-center py-24 text-label-2">
+      <FlaskConical :size="44" class="mx-auto opacity-50" />
+      <p class="mt-3 text-lg text-label-1">暂无回测结果</p>
       <p class="text-sm mt-1">
         运行
-        <code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+        <code class="bg-surface-2 px-1.5 py-0.5 rounded text-label-2">
           python -m quant.backtest.backtester
         </code>
         生成结果
       </p>
     </div>
 
-    <div v-else class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <BaseCard v-else class="overflow-hidden">
       <table class="w-full text-sm">
-        <thead class="bg-gray-50 text-xs text-gray-400">
+        <thead class="bg-surface-2 text-xs text-label-2">
           <tr>
             <th class="px-4 py-3 text-left">代码</th>
             <th class="px-4 py-3 text-right">总收益</th>
@@ -31,30 +33,32 @@
         <tbody>
           <tr
             v-for="r in results" :key="r.code ?? r.etf_code"
-            class="border-t border-gray-50 hover:bg-gray-50"
+            class="border-t border-hairline hover:bg-surface-2"
           >
-            <td class="px-4 py-3 font-semibold text-gray-800">{{ r.code ?? r.etf_code ?? '—' }}</td>
+            <td class="px-4 py-3 font-semibold text-label-1">{{ r.code ?? r.etf_code ?? '—' }}</td>
             <td
               class="px-4 py-3 text-right font-medium"
-              :class="(r.total_return ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'"
+              :class="(r.total_return ?? 0) >= 0 ? 'text-sys-green' : 'text-sys-red'"
             >{{ pct(r.total_return) }}</td>
             <td
               class="px-4 py-3 text-right font-medium"
-              :class="(r.annual_return ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'"
+              :class="(r.annual_return ?? 0) >= 0 ? 'text-sys-green' : 'text-sys-red'"
             >{{ pct(r.annual_return) }}</td>
-            <td class="px-4 py-3 text-right">{{ pct(r.win_rate) }}</td>
-            <td class="px-4 py-3 text-right text-red-500">{{ pct(r.max_drawdown) }}</td>
-            <td class="px-4 py-3 text-right text-gray-500">{{ r.trade_count ?? r.n_trades ?? '—' }}</td>
+            <td class="px-4 py-3 text-right text-label-1">{{ pct(r.win_rate) }}</td>
+            <td class="px-4 py-3 text-right text-sys-red">{{ pct(r.max_drawdown) }}</td>
+            <td class="px-4 py-3 text-right text-label-2">{{ r.trade_count ?? r.n_trades ?? '—' }}</td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </BaseCard>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
+import BaseCard from '../components/base/BaseCard.vue'
+import { FlaskConical } from '@lucide/vue'
 
 const results = ref([])
 const loading = ref(true)

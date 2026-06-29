@@ -1,162 +1,138 @@
 <template>
-  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid #f1f5f9">
+  <BaseCard class="overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-hairline">
       <div class="flex items-center gap-2">
-        <span class="font-semibold text-gray-800">持仓明细</span>
-        <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-              style="background:#eff6ff;color:#1d4ed8">
-          {{ pf.positions?.length ?? 0 }} 只
-        </span>
+        <span class="font-semibold text-label-1">持仓明细</span>
+        <Badge tone="blue" :label="(pf.positions?.length ?? 0) + ' 只'" />
       </div>
-      <button class="text-sm font-medium px-4 py-2 rounded-xl text-white transition shadow-sm"
-              style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)"
-              @click="openAdd">📥 导入初始持仓</button>
+      <BaseButton variant="primary" size="sm" @click="openAdd">
+        <Upload :size="14" /> 导入初始持仓
+      </BaseButton>
     </div>
 
     <table class="w-full text-sm">
-      <thead style="background:#f8fafc">
+      <thead class="bg-surface-2">
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400">标的</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">股数</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">成本价</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">成本市值</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">现价</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">现值</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">浮盈</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">浮盈%</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400">买入日期</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">操作</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-label-2">标的</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">股数</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">成本价</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">成本市值</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">现价</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">现值</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">浮盈</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">浮盈%</th>
+          <th class="px-4 py-3 text-center text-xs font-semibold text-label-2">买入日期</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">操作</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!pf.positions?.length">
-          <td colspan="10" class="text-center py-14 text-gray-400">
-            <div class="text-4xl mb-3">📭</div>
-            <p class="font-medium">暂无持仓</p>
+          <td colspan="10" class="text-center py-14 text-label-2">
+            <Inbox :size="36" class="mx-auto mb-3 opacity-50" />
+            <p class="font-medium text-label-1">暂无持仓</p>
             <p class="text-xs mt-1">点击「导入初始持仓」添加使用平台前的已有持仓</p>
           </td>
         </tr>
         <template v-for="p in pf.positions" :key="p.code">
-        <tr class="transition-colors" :style="{ borderTop: '1px solid #f8fafc' }"
-            @mouseenter="$event.currentTarget.style.background='#fafbff'"
-            @mouseleave="$event.currentTarget.style.background=''">
+        <tr class="border-t border-hairline transition-colors hover:bg-surface-2">
           <td class="px-4 py-4">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                   style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold bg-sys-blueDim text-sys-blue">
                 {{ p.code.slice(-2) }}
               </div>
               <div>
-                <div class="flex items-center gap-1.5 font-semibold text-gray-800">
+                <div class="flex items-center gap-1.5 font-semibold text-label-1">
                   {{ p.name }}
-                  <span v-if="sellSigs[p.code]"
-                        class="text-xs px-1.5 py-0.5 rounded font-semibold"
-                        :style="TRIGGER_BADGE[sellSigs[p.code]]?.style">
-                    {{ TRIGGER_BADGE[sellSigs[p.code]]?.label }}
-                  </span>
+                  <Badge v-if="sellSigs[p.code]" :type="sellSigs[p.code]" />
                 </div>
-                <div class="text-xs text-gray-400">{{ p.code }}</div>
+                <div class="text-xs text-label-2">{{ p.code }}</div>
               </div>
             </div>
           </td>
-          <td class="px-4 py-4 text-right text-gray-700 font-medium">{{ p.shares.toLocaleString() }}</td>
-          <td class="px-4 py-4 text-right text-gray-700">¥{{ p.cost_price.toFixed(3) }}</td>
-          <td class="px-4 py-4 text-right font-semibold text-gray-800">
+          <td class="px-4 py-4 text-right text-label-1 font-medium">{{ p.shares.toLocaleString() }}</td>
+          <td class="px-4 py-4 text-right text-label-1">¥{{ p.cost_price.toFixed(3) }}</td>
+          <td class="px-4 py-4 text-right font-semibold text-label-1">
             {{ fmtCash(p.shares * p.cost_price) }}
           </td>
           <td class="px-4 py-4 text-right">
-            <span v-if="pricesLoading" class="text-xs text-gray-300">…</span>
-            <span v-else-if="marketPrices[p.code]" class="text-gray-700">
+            <span v-if="pricesLoading" class="text-xs text-label-3">…</span>
+            <span v-else-if="marketPrices[p.code]" class="text-label-1">
               ¥{{ marketPrices[p.code].toFixed(3) }}
             </span>
-            <span v-else class="text-xs text-gray-300">--</span>
+            <span v-else class="text-xs text-label-3">--</span>
           </td>
-          <td class="px-4 py-4 text-right font-semibold text-gray-800">
+          <td class="px-4 py-4 text-right font-semibold text-label-1">
             <span v-if="marketPrices[p.code]">{{ fmtCash(p.shares * marketPrices[p.code]) }}</span>
-            <span v-else class="text-xs text-gray-300">--</span>
+            <span v-else class="text-xs text-label-3">--</span>
           </td>
           <td class="px-4 py-4 text-right font-semibold">
             <template v-if="marketPrices[p.code]">
-              <span :style="{ color: profitColor(p.shares * (marketPrices[p.code] - p.cost_price)) }">
+              <span :class="profitToneClass(p.shares * (marketPrices[p.code] - p.cost_price))">
                 {{ fmtProfit(p.shares * (marketPrices[p.code] - p.cost_price)) }}
               </span>
             </template>
-            <span v-else class="text-xs text-gray-300">--</span>
+            <span v-else class="text-xs text-label-3">--</span>
           </td>
           <td class="px-4 py-4 text-right font-semibold">
             <template v-if="marketPrices[p.code]">
-              <span :style="{ color: profitColor(marketPrices[p.code] - p.cost_price) }">
+              <span :class="profitToneClass(marketPrices[p.code] - p.cost_price)">
                 {{ fmtPct2((marketPrices[p.code] - p.cost_price) / p.cost_price * 100) }}
               </span>
             </template>
-            <span v-else class="text-xs text-gray-300">--</span>
+            <span v-else class="text-xs text-label-3">--</span>
           </td>
           <td class="px-4 py-4 text-center">
-            <span class="text-xs px-2.5 py-1 rounded-full" style="background:#f1f5f9;color:#64748b">
-              {{ p.buy_date }}
-            </span>
+            <Badge tone="gray" :label="p.buy_date" />
           </td>
           <td class="px-4 py-4 text-right">
             <div class="flex items-center justify-end gap-2">
               <button class="text-xs font-semibold px-2 py-1 rounded-lg transition"
-                      :style="activeQuick?.code===p.code&&activeQuick.action==='buy'
-                        ?'background:#059669;color:white'
-                        :'background:#f0fdf4;color:#059669'"
+                      :class="activeQuick?.code===p.code&&activeQuick.action==='buy'
+                        ? 'bg-sys-green text-white' : 'bg-sys-greenDim text-sys-green'"
                       @click="openQuick(p.code,'buy')">+加仓</button>
               <button class="text-xs font-semibold px-2 py-1 rounded-lg transition"
-                      :style="activeQuick?.code===p.code&&activeQuick.action==='sell'
-                        ?'background:#f43f5e;color:white'
-                        :'background:#fff1f2;color:#f43f5e'"
+                      :class="activeQuick?.code===p.code&&activeQuick.action==='sell'
+                        ? 'bg-sys-red text-white' : 'bg-sys-redDim text-sys-red'"
                       @click="openQuick(p.code,'sell')">-减持</button>
-              <span class="text-gray-200 select-none text-xs">|</span>
-              <button class="text-xs font-medium" style="color:#3b82f6"
-                      @click="openEdit(p.code)">编辑</button>
-              <button class="text-xs font-medium" style="color:#94a3b8"
-                      @click="deletePos(p.code)">删除</button>
+              <span class="text-label-3 select-none text-xs">|</span>
+              <button class="text-xs font-medium text-sys-blue" @click="openEdit(p.code)">编辑</button>
+              <button class="text-xs font-medium text-label-2" @click="deletePos(p.code)">删除</button>
             </div>
           </td>
         </tr>
-        <tr v-if="activeQuick?.code === p.code" style="background:#f0fdf4">
+        <tr v-if="activeQuick?.code === p.code" :class="activeQuick.action === 'buy' ? 'bg-sys-greenDim' : 'bg-sys-redDim'">
           <td colspan="10" class="px-6 py-3">
             <div class="flex items-center gap-4 flex-wrap">
               <span class="text-sm font-semibold flex-shrink-0"
-                    :style="activeQuick.action==='buy'?'color:#059669':'color:#f43f5e'">
+                    :class="activeQuick.action==='buy' ? 'text-sys-green' : 'text-sys-red'">
                 {{ activeQuick.action==='buy' ? '+ 加仓' : '- 减持' }} · {{ p.name }}
               </span>
               <div class="flex items-center gap-1.5">
-                <label class="text-xs text-gray-400 flex-shrink-0">股数</label>
+                <label class="text-xs text-label-2 flex-shrink-0">股数</label>
                 <input v-model.number="quickForm.shares" type="number" min="100" step="100"
-                       class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                       class="rounded-lg px-2.5 py-1.5 text-sm w-28 bg-surface-1 text-label-1 border border-hairline focus:outline-none focus:ring-2 focus:ring-sys-blue"
                        placeholder="100 股" @keyup.enter="submitQuick(p)" />
               </div>
               <div class="flex items-center gap-1.5">
-                <label class="text-xs text-gray-400 flex-shrink-0">价格（元）</label>
+                <label class="text-xs text-label-2 flex-shrink-0">价格（元）</label>
                 <input v-model.number="quickForm.price" type="number" step="0.001"
-                       class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                       class="rounded-lg px-2.5 py-1.5 text-sm w-24 bg-surface-1 text-label-1 border border-hairline focus:outline-none focus:ring-2 focus:ring-sys-blue"
                        placeholder="0.000" @keyup.enter="submitQuick(p)" />
               </div>
-              <div v-if="quickQuota > 0" class="text-xs text-gray-500 flex-shrink-0">
+              <div v-if="quickQuota > 0" class="text-xs text-label-2 flex-shrink-0">
                 {{ activeQuick.action==='buy' ? '扣款' : '到账' }}
-                <span class="font-semibold text-gray-700">{{ fmtCash(quickQuota) }}</span>
-                <span class="mx-1.5 text-gray-300">·</span>
+                <span class="font-semibold text-label-1">{{ fmtCash(quickQuota) }}</span>
+                <span class="mx-1.5 text-label-3">·</span>
                 现金将变为
-                <span :style="activeQuick.action==='buy'&&pf.cash-quickQuota<0
-                              ?'color:#ef4444;font-weight:600':'color:#374151'">
+                <span :class="activeQuick.action==='buy' && pf.cash-quickQuota<0 ? 'text-sys-red font-semibold' : 'text-label-1'">
                   {{ fmtCash(activeQuick.action==='buy' ? pf.cash-quickQuota : pf.cash+quickQuota) }}
                 </span>
               </div>
               <div class="ml-auto flex items-center gap-2 flex-shrink-0">
-                <button @click="submitQuick(p)"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition"
-                        :style="activeQuick.action==='buy'
-                          ?'background:linear-gradient(135deg,#064e3b,#059669)'
-                          :'background:linear-gradient(135deg,#9f1239,#f43f5e)'">
+                <BaseButton :variant="activeQuick.action==='buy' ? 'green' : 'red'" size="sm" @click="submitQuick(p)">
                   确认
-                </button>
-                <button @click="activeQuick = null"
-                        class="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-500 transition">
-                  取消
-                </button>
+                </BaseButton>
+                <BaseButton variant="ghost" size="sm" @click="activeQuick = null">取消</BaseButton>
               </div>
             </div>
           </td>
@@ -164,21 +140,21 @@
         </template>
       </tbody>
     </table>
-  </div>
+  </BaseCard>
 
   <!-- 导入/编辑持仓 Modal -->
   <Teleport to="body">
     <div v-if="showModal" class="modal-overlay">
-      <div class="modal-box" @click.stop>
+      <BaseCard class="modal-box" @click.stop>
         <div class="flex items-center justify-between mb-4">
-          <h3 class="modal-title" style="margin-bottom:0">{{ modalTitle }}</h3>
-          <button class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-lg font-light"
-                  @click="showModal = false">✕</button>
+          <h3 class="text-base font-bold text-label-1">{{ modalTitle }}</h3>
+          <button class="w-8 h-8 flex items-center justify-center rounded-lg text-label-2 hover:text-label-1 hover:bg-surface-2 transition-all"
+                  @click="showModal = false"><X :size="16" /></button>
         </div>
 
         <div v-if="editCode === null"
-             class="flex items-start gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3">
-          <span class="mt-0.5">ℹ️</span>
+             class="flex items-start gap-2 text-xs text-sys-blue bg-sys-blueDim rounded-lg px-3 py-2 mb-3">
+          <Info :size="14" class="mt-0.5 flex-shrink-0" />
           <span>仅用于导入使用平台前的已有持仓，<strong>不扣减现金余额</strong>。日常交易请使用「新增交易」按钮。</span>
         </div>
 
@@ -186,12 +162,10 @@
           <div>
             <label class="field-label">ETF 代码 *</label>
             <div v-if="editCode === null && todaySignals.length" class="mb-2">
-              <span class="text-xs text-gray-400 mr-1.5">今日推荐：</span>
+              <span class="text-xs text-label-2 mr-1.5">今日推荐：</span>
               <button v-for="s in todaySignals" :key="s.code"
-                      class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full mr-1 mb-1 border transition"
-                      :style="form.code === s.code
-                        ? 'background:#059669;color:white;border-color:#059669'
-                        : 'background:#f0fdf4;color:#065f46;border-color:#bbf7d0'"
+                      class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full mr-1 mb-1 transition"
+                      :class="form.code === s.code ? 'bg-sys-green text-white' : 'bg-sys-greenDim text-sys-green'"
                       @click="form.code = s.code; form.name = s.name">
                 {{ s.name }}
                 <span class="opacity-70">{{ (s.prob_up * 100).toFixed(0) }}%</span>
@@ -203,7 +177,7 @@
           </div>
           <div>
             <label class="field-label">名称</label>
-            <input v-model="form.name" type="text" readonly class="input bg-gray-50 text-gray-400" />
+            <input v-model="form.name" type="text" readonly class="input text-label-2" />
           </div>
           <div class="flex gap-3">
             <div class="flex-1">
@@ -222,11 +196,11 @@
           </div>
         </div>
 
-        <div class="modal-actions">
-          <button class="btn-cancel" @click="showModal = false">取消</button>
-          <button class="btn-primary" @click="submit">保存</button>
+        <div class="flex gap-2 mt-5">
+          <BaseButton variant="ghost" class="flex-1" @click="showModal = false">取消</BaseButton>
+          <BaseButton variant="primary" class="flex-1" @click="submit">保存</BaseButton>
         </div>
-      </div>
+      </BaseCard>
     </div>
   </Teleport>
 </template>
@@ -236,6 +210,10 @@ import { ref, reactive, computed } from 'vue'
 import { api, fmtCash, todayStr } from '../api.js'
 import { store } from '../store.js'
 import EtfSearch from './EtfSearch.vue'
+import BaseCard   from './base/BaseCard.vue'
+import BaseButton from './base/BaseButton.vue'
+import Badge      from './base/Badge.vue'
+import { Upload, Inbox, Info, X } from '@lucide/vue'
 
 const props = defineProps({
   pf:            { type: Object,  required: true },
@@ -246,12 +224,6 @@ const props = defineProps({
   sellSigs:      { type: Object,  default: () => ({}) },
 })
 const emit = defineEmits(['refresh'])
-
-const TRIGGER_BADGE = {
-  STOP_LOSS:   { label: '止损', style: 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca' },
-  TAKE_PROFIT: { label: '止盈', style: 'background:#fffbeb;color:#b45309;border:1px solid #fde68a' },
-  MODEL_SELL:  { label: '看空', style: 'background:#fff1f2;color:#e11d48;border:1px solid #fecdd3' },
-}
 
 const activeQuick = ref(null)       // { code, action: 'buy'|'sell' }
 const quickForm   = reactive({ shares: '', price: '' })
@@ -295,8 +267,8 @@ async function submitQuick(pos) {
   }
 }
 
-function profitColor(v) {
-  return v > 0 ? '#059669' : v < 0 ? '#ef4444' : '#94a3b8'
+function profitToneClass(v) {
+  return v > 0 ? 'text-sys-green' : v < 0 ? 'text-sys-red' : 'text-label-3'
 }
 function fmtProfit(v) {
   const abs = Math.abs(Math.round(v || 0))
@@ -361,12 +333,15 @@ async function deletePos(code) {
 </script>
 
 <style scoped>
-.input { @apply w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white; }
-.field-label { @apply block text-xs font-medium text-gray-500 mb-1.5; }
-.btn-primary { @apply flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition cursor-pointer border-0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
-.btn-cancel  { @apply flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer; }
-.modal-overlay { @apply fixed inset-0 flex items-center justify-center z-50; background: rgba(15,23,42,.6); backdrop-filter: blur(4px); }
-.modal-box    { @apply bg-white rounded-2xl shadow-2xl w-96 p-6; }
-.modal-title  { @apply text-base font-bold text-gray-800 mb-5; }
-.modal-actions { @apply flex gap-2 mt-5; }
+.input {
+  @apply w-full rounded-xl px-3.5 py-2.5 text-sm bg-surface-2 text-label-1 border border-transparent
+         focus:outline-none focus:ring-2 focus:ring-sys-blue focus:border-transparent transition;
+}
+.field-label { @apply block text-xs font-medium text-label-2 mb-1.5; }
+.modal-overlay {
+  @apply fixed inset-0 flex items-center justify-center z-50;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+}
+.modal-box { @apply w-96 p-6; }
 </style>

@@ -1,34 +1,27 @@
 <template>
   <div class="p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-5">📧 邮件发送记录</h2>
+    <h2 class="text-xl font-bold text-label-1 mb-5 flex items-center gap-2">
+      <Mail :size="20" class="text-label-2" /> 邮件发送记录
+    </h2>
 
-    <div v-if="loading" class="text-center text-gray-400 py-20">加载中…</div>
+    <div v-if="loading" class="text-center text-label-2 py-20">加载中…</div>
 
     <template v-else>
       <div v-if="logs.length" class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-xl p-4 shadow-sm border">
-          <div class="text-gray-400 text-xs mb-1">总发送</div>
-          <div class="font-bold text-2xl text-gray-800">{{ logs.length }}</div>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow-sm border">
-          <div class="text-gray-400 text-xs mb-1">成功</div>
-          <div class="font-bold text-2xl text-green-600">{{ successCount }}</div>
-        </div>
-        <div class="bg-white rounded-xl p-4 shadow-sm border">
-          <div class="text-gray-400 text-xs mb-1">失败</div>
-          <div class="font-bold text-2xl text-red-500">{{ failCount }}</div>
-        </div>
+        <StatCard label="总发送" :value="logs.length" />
+        <StatCard label="成功" :value="successCount" accent="green" />
+        <StatCard label="失败" :value="failCount" accent="red" />
       </div>
 
-      <div v-if="!logs.length" class="text-center py-24 text-gray-400">
-        <div class="text-5xl">📭</div>
-        <p class="mt-3 text-lg">暂无邮件记录</p>
+      <div v-if="!logs.length" class="text-center py-24 text-label-2">
+        <Inbox :size="44" class="mx-auto opacity-50" />
+        <p class="mt-3 text-lg text-label-1">暂无邮件记录</p>
         <p class="text-sm mt-1">发送邮件后会自动记录在这里</p>
       </div>
 
-      <div v-else class="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <BaseCard v-else class="overflow-hidden">
         <table class="w-full text-sm">
-          <thead class="bg-gray-50 text-xs text-gray-400">
+          <thead class="bg-surface-2 text-xs text-label-2">
             <tr>
               <th class="px-4 py-3 text-left">时间</th>
               <th class="px-4 py-3 text-left">收件人</th>
@@ -39,19 +32,19 @@
           <tbody>
             <tr
               v-for="(log, i) in logs" :key="i"
-              class="border-t border-gray-50 hover:bg-gray-50"
+              class="border-t border-hairline hover:bg-surface-2"
             >
-              <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ log.timestamp }}</td>
-              <td class="px-4 py-3 text-gray-700">{{ log.to }}</td>
-              <td class="px-4 py-3 text-gray-700 max-w-sm truncate">{{ log.subject }}</td>
+              <td class="px-4 py-3 text-label-2 text-xs whitespace-nowrap">{{ log.timestamp }}</td>
+              <td class="px-4 py-3 text-label-1">{{ log.to }}</td>
+              <td class="px-4 py-3 text-label-1 max-w-sm truncate">{{ log.subject }}</td>
               <td class="px-4 py-3 text-center">
-                <span v-if="log.success" class="badge bg-green-100 text-green-700">✓ 成功</span>
-                <span v-else class="badge bg-red-100 text-red-700" :title="log.error ?? ''">✗ 失败</span>
+                <Badge v-if="log.success" tone="green" label="✓ 成功" />
+                <Badge v-else tone="red" label="✗ 失败" :title="log.error ?? ''" />
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </BaseCard>
     </template>
   </div>
 </template>
@@ -59,6 +52,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
+import BaseCard from '../components/base/BaseCard.vue'
+import StatCard from '../components/base/StatCard.vue'
+import Badge    from '../components/base/Badge.vue'
+import { Mail, Inbox } from '@lucide/vue'
 
 const logs    = ref([])
 const loading = ref(true)

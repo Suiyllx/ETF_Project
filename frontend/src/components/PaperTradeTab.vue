@@ -1,134 +1,101 @@
 <template>
   <div>
-    <div v-if="loading" class="py-24 text-center text-gray-400">加载中…</div>
-    <div v-else-if="err" class="py-10 text-center text-red-500">{{ err }}</div>
+    <div v-if="loading" class="py-24 text-center text-label-2">加载中…</div>
+    <div v-else-if="err" class="py-10 text-center text-sys-red">{{ err }}</div>
     <template v-else>
 
       <!-- 顶部操作栏 -->
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h2 class="font-bold text-gray-800 text-base">
+          <h2 class="font-bold text-label-1 text-base">
             模拟盘追踪
-            <span class="text-xs font-normal text-gray-400 ml-2">
+            <span class="text-xs font-normal text-label-2 ml-2">
               入场价 = T+1 开盘，出场价 = T+{{ paper.trades?.[0]?.forward ?? 5 }}+1 开盘
             </span>
           </h2>
-          <p v-if="paper.updated_at" class="text-xs text-gray-400 mt-0.5">
+          <p v-if="paper.updated_at" class="text-xs text-label-2 mt-0.5">
             上次更新：{{ paper.updated_at }}
           </p>
         </div>
-        <button v-if="store.isAdmin"
-                class="text-sm font-medium px-4 py-2 rounded-xl text-white transition shadow-sm"
-                style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)"
-                :disabled="refreshing"
-                @click="refreshPaper">
-          {{ refreshing ? '计算中…' : '🔄 重新计算' }}
-        </button>
+        <BaseButton v-if="store.isAdmin" variant="primary" :disabled="refreshing" @click="refreshPaper">
+          <Loader2 v-if="refreshing" :size="14" class="animate-spin" />
+          <RefreshCw v-else :size="14" />
+          {{ refreshing ? '计算中…' : '重新计算' }}
+        </BaseButton>
       </div>
 
       <!-- 汇总卡片 -->
       <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
-          <div class="text-xs opacity-70 mb-1">已结束交易</div>
-          <div class="font-bold text-2xl">{{ ps.total ?? 0 }}</div>
-          <div class="text-xs opacity-60 mt-1">笔</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md" :style="winRateColor">
-          <div class="text-xs opacity-70 mb-1">整体胜率</div>
-          <div class="font-bold text-2xl">{{ ps.win_rate_pct ?? 0 }}%</div>
-          <div class="text-xs opacity-60 mt-1">{{ ps.wins ?? 0 }}胜 {{ ps.losses ?? 0 }}败</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#3b0764,#7c3aed)">
-          <div class="text-xs opacity-70 mb-1">近30条胜率</div>
-          <div class="font-bold text-2xl">{{ ps.recent30_win_rate_pct ?? 0 }}%</div>
-          <div class="text-xs opacity-60 mt-1">样本 {{ ps.recent30_total ?? 0 }} 笔</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md" :style="avgRetColor">
-          <div class="text-xs opacity-70 mb-1">平均收益</div>
-          <div class="font-bold text-2xl">
-            {{ ps.avg_ret_pct >= 0 ? '+' : '' }}{{ ps.avg_ret_pct ?? 0 }}%
-          </div>
-          <div class="text-xs opacity-60 mt-1">
-            最优 +{{ ps.best_ret_pct ?? 0 }}% / 最差 {{ ps.worst_ret_pct ?? 0 }}%
-          </div>
-        </div>
+        <StatCard label="已结束交易" :value="ps.total ?? 0" />
+        <StatCard label="整体胜率" :value="(ps.win_rate_pct ?? 0) + '%'" :accent="winRateAccent"
+                  :delta="(ps.wins ?? 0) + '胜 ' + (ps.losses ?? 0) + '败'" trend="neutral" />
+        <StatCard label="近30条胜率" :value="(ps.recent30_win_rate_pct ?? 0) + '%'" accent="blue"
+                  :delta="'样本 ' + (ps.recent30_total ?? 0) + ' 笔'" trend="neutral" />
+        <StatCard label="平均收益" :value="((ps.avg_ret_pct >= 0 ? '+' : '') + (ps.avg_ret_pct ?? 0)) + '%'"
+                  :accent="avgRetAccent"
+                  :delta="'最优 +' + (ps.best_ret_pct ?? 0) + '% / 最差 ' + (ps.worst_ret_pct ?? 0) + '%'" trend="neutral" />
       </div>
 
       <!-- 逐笔明细 -->
-      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div class="flex items-center gap-3 px-5 py-4" style="border-bottom:1px solid #f1f5f9">
-          <span class="font-semibold text-gray-800">逐笔明细</span>
-          <div class="flex gap-1 ml-auto">
-            <button v-for="f in FILTERS" :key="f.v"
-                    class="text-xs px-3 py-1 rounded-full border transition"
-                    :style="filter === f.v
-                      ? 'background:#1e3a8a;color:white;border-color:#1e3a8a'
-                      : 'background:white;color:#64748b;border-color:#e2e8f0'"
-                    @click="filter = f.v">
-              {{ f.label }}
-            </button>
+      <BaseCard class="overflow-hidden">
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-hairline">
+          <span class="font-semibold text-label-1">逐笔明细</span>
+          <div class="ml-auto">
+            <SegmentControl v-model="filter" :options="FILTERS" />
           </div>
         </div>
 
-        <div v-if="!filteredTrades.length" class="text-center py-14 text-gray-400">
-          <div class="text-4xl mb-3">📋</div>
+        <div v-if="!filteredTrades.length" class="text-center py-14 text-label-2">
+          <ClipboardList :size="36" class="mx-auto mb-3 opacity-50" />
           <p>暂无记录</p>
         </div>
 
         <table v-else class="w-full text-sm">
-          <thead style="background:#f8fafc">
+          <thead class="bg-surface-2">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400">信号日</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400">标的</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">做多概率</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">入场价</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">出场价</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-400">收益</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-400">状态</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-label-2">信号日</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-label-2">标的</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">做多概率</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">入场价</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">出场价</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-label-2">收益</th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-label-2">状态</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="t in filteredTrades" :key="t.signal_date + t.code"
-                class="transition-colors" :style="{ borderTop: '1px solid #f8fafc' }"
-                @mouseenter="$event.currentTarget.style.background='#fafbff'"
-                @mouseleave="$event.currentTarget.style.background=''">
-              <td class="px-4 py-3 text-xs text-gray-500">{{ t.signal_date }}</td>
+                class="border-t border-hairline transition-colors hover:bg-surface-2">
+              <td class="px-4 py-3 text-xs text-label-2">{{ t.signal_date }}</td>
               <td class="px-4 py-3">
-                <div class="font-semibold text-gray-800">{{ t.name }}</div>
-                <div class="text-xs text-gray-400">{{ t.code }}</div>
+                <div class="font-semibold text-label-1">{{ t.name }}</div>
+                <div class="text-xs text-label-2">{{ t.code }}</div>
               </td>
               <td class="px-4 py-3 text-right">
-                <span class="text-xs font-bold" style="color:#059669">
+                <span class="text-xs font-bold text-sys-green">
                   {{ (t.prob_up * 100).toFixed(1) }}%
                 </span>
               </td>
-              <td class="px-4 py-3 text-right text-gray-600 text-xs">
-                <div>{{ t.entry_price ? '¥' + t.entry_price : '—' }}</div>
-                <div class="text-gray-400">{{ t.entry_date ?? '' }}</div>
+              <td class="px-4 py-3 text-right text-label-2 text-xs">
+                <div class="text-label-1">{{ t.entry_price ? '¥' + t.entry_price : '—' }}</div>
+                <div>{{ t.entry_date ?? '' }}</div>
               </td>
-              <td class="px-4 py-3 text-right text-gray-600 text-xs">
-                <div>{{ t.exit_price ? '¥' + t.exit_price : '—' }}</div>
-                <div class="text-gray-400">{{ t.exit_date ?? '' }}</div>
+              <td class="px-4 py-3 text-right text-label-2 text-xs">
+                <div class="text-label-1">{{ t.exit_price ? '¥' + t.exit_price : '—' }}</div>
+                <div>{{ t.exit_date ?? '' }}</div>
               </td>
               <td class="px-4 py-3 text-right font-bold text-sm">
-                <span v-if="t.ret !== null"
-                      :style="t.ret >= 0 ? 'color:#059669' : 'color:#f43f5e'">
+                <span v-if="t.ret !== null" :class="t.ret >= 0 ? 'text-sys-green' : 'text-sys-red'">
                   {{ t.ret >= 0 ? '+' : '' }}{{ (t.ret * 100).toFixed(2) }}%
                 </span>
-                <span v-else class="text-gray-300">—</span>
+                <span v-else class="text-label-3">—</span>
               </td>
               <td class="px-4 py-3 text-center">
-                <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                      :style="STATUS_STYLE[t.status] || STATUS_STYLE.pending">
-                  {{ STATUS_LABEL[t.status] }}
-                </span>
+                <Badge :tone="STATUS_TONE[t.status] || 'gray'" :label="STATUS_LABEL[t.status]" />
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </BaseCard>
 
     </template>
   </div>
@@ -138,19 +105,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import BaseCard       from './base/BaseCard.vue'
+import BaseButton     from './base/BaseButton.vue'
+import SegmentControl from './base/SegmentControl.vue'
+import StatCard       from './base/StatCard.vue'
+import Badge          from './base/Badge.vue'
+import { RefreshCw, ClipboardList, Loader2 } from '@lucide/vue'
 
 const FILTERS = [
-  { v: 'all',     label: '全部' },
-  { v: 'closed',  label: '已结束' },
-  { v: 'open',    label: '持仓中' },
-  { v: 'pending', label: '待入场' },
+  { key: 'all',     label: '全部' },
+  { key: 'closed',  label: '已结束' },
+  { key: 'open',    label: '持仓中' },
+  { key: 'pending', label: '待入场' },
 ]
 const STATUS_LABEL = { closed: '已结束', open: '持仓中', pending: '待入场' }
-const STATUS_STYLE = {
-  closed:  'background:#f0fdf4;color:#065f46',
-  open:    'background:#eff6ff;color:#1e3a8a',
-  pending: 'background:#f8fafc;color:#64748b',
-}
+const STATUS_TONE  = { closed: 'green', open: 'blue', pending: 'gray' }
 
 const paper     = ref({ summary: {}, trades: [], updated_at: null })
 const loading   = ref(false)
@@ -159,18 +128,13 @@ const refreshing = ref(false)
 const filter    = ref('all')
 
 const ps = computed(() => paper.value.summary ?? {})
-const winRateColor = computed(() => {
+const winRateAccent = computed(() => {
   const r = ps.value.win_rate_pct ?? 0
-  if (r >= 60) return 'background:linear-gradient(135deg,#064e3b,#059669)'
-  if (r >= 50) return 'background:linear-gradient(135deg,#78350f,#d97706)'
-  return 'background:linear-gradient(135deg,#7f1d1d,#ef4444)'
+  if (r >= 60) return 'green'
+  if (r >= 50) return 'orange'
+  return 'red'
 })
-const avgRetColor = computed(() => {
-  const r = ps.value.avg_ret_pct ?? 0
-  return r >= 0
-    ? 'background:linear-gradient(135deg,#064e3b,#059669)'
-    : 'background:linear-gradient(135deg,#7f1d1d,#ef4444)'
-})
+const avgRetAccent = computed(() => (ps.value.avg_ret_pct ?? 0) >= 0 ? 'green' : 'red')
 const filteredTrades = computed(() => {
   const all = paper.value.trades ?? []
   return filter.value === 'all' ? all : all.filter(t => t.status === filter.value)

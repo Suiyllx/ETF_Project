@@ -1,73 +1,49 @@
 <template>
   <div>
     <!-- 手动触发器（管理员） -->
-    <div v-if="store.isAdmin"
-         class="mb-5 rounded-2xl p-4 flex items-center gap-4"
-         :style="triggerBannerStyle">
+    <BaseCard v-if="store.isAdmin" class="mb-5 p-4 flex items-center gap-4">
       <div class="flex-1 min-w-0">
-        <div class="font-semibold text-sm" :style="triggerTextStyle">{{ triggerTitle }}</div>
-        <div class="text-xs mt-0.5 opacity-70" :style="triggerTextStyle">{{ triggerSub }}</div>
+        <div class="font-semibold text-sm text-label-1">{{ triggerTitle }}</div>
+        <div class="text-xs mt-0.5 text-label-2">{{ triggerSub }}</div>
         <div v-if="job.status === 'running' && job.log?.length"
-             class="mt-2 text-xs font-mono opacity-60" :style="triggerTextStyle">
+             class="mt-2 text-xs font-mono text-label-2">
           {{ job.log[job.log.length - 1] }}
         </div>
       </div>
-      <button class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2"
-              :style="triggerBtnStyle"
-              :disabled="job.status === 'running'"
-              @click="runSignals">
-        <span v-if="job.status === 'running'" class="animate-spin inline-block">⟳</span>
+      <BaseButton :variant="triggerBtnVariant" :disabled="job.status === 'running'" @click="runSignals">
+        <Loader2 v-if="job.status === 'running'" :size="14" class="animate-spin" />
+        <Rocket v-else :size="14" />
         {{ triggerBtnLabel }}
-      </button>
-    </div>
+      </BaseButton>
+    </BaseCard>
 
-    <div v-if="loading" class="py-24 text-center text-gray-400">加载中…</div>
-    <div v-else-if="err" class="py-10 text-center text-red-500">{{ err }}</div>
+    <div v-if="loading" class="py-24 text-center text-label-2">加载中…</div>
+    <div v-else-if="err" class="py-10 text-center text-sys-red">{{ err }}</div>
     <template v-else>
       <!-- 汇总卡片 -->
       <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
-          <div class="text-xs opacity-70 mb-1">信号日期</div>
-          <div class="font-bold">{{ today.trade_date || '—' }}</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#064e3b,#059669)">
-          <div class="text-xs opacity-70 mb-1">做多信号数</div>
-          <div class="font-bold text-2xl">{{ signals.length }}</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#3b0764,#7c3aed)">
-          <div class="text-xs opacity-70 mb-1">平均做多概率</div>
-          <div class="font-bold text-2xl">{{ avgProb }}%</div>
-        </div>
-        <div class="rounded-2xl p-4 text-white shadow-md"
-             style="background:linear-gradient(135deg,#78350f,#d97706)">
-          <div class="text-xs opacity-70 mb-1">生成时间</div>
-          <div class="font-bold">{{ genTime }}</div>
-        </div>
+        <StatCard label="信号日期" :value="today.trade_date || '—'" />
+        <StatCard label="做多信号数" :value="signals.length" accent="green" />
+        <StatCard label="平均做多概率" :value="avgProb + '%'" accent="blue" />
+        <StatCard label="生成时间" :value="genTime" accent="orange" />
       </div>
 
-      <div v-if="!signals.length" class="text-center py-20 text-gray-400">
-        <div class="text-5xl mb-4">⚪</div>
-        <p class="text-lg font-semibold text-gray-500">今日无做多信号</p>
+      <div v-if="!signals.length" class="text-center py-20 text-label-2">
+        <CircleDashed :size="44" class="mx-auto mb-4 opacity-50" />
+        <p class="text-lg font-semibold text-label-1">今日无做多信号</p>
         <p class="text-sm mt-1">候选池为空或尚未生成，请等待收盘后自动运行</p>
       </div>
       <template v-else>
         <!-- 分类筛选条 -->
         <div class="flex flex-wrap gap-2 mb-4">
           <button class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-                  :style="catFilter === ''
-                    ? 'background:#3b82f6;color:white'
-                    : 'background:#f1f5f9;color:#64748b'"
+                  :class="catFilter === '' ? 'bg-sys-blueDim text-sys-blue' : 'bg-surface-2 text-label-2'"
                   @click="catFilter = ''">
             全部 ({{ signals.length }})
           </button>
           <button v-for="cat in signalCats" :key="cat"
                   class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-                  :style="catFilter === cat
-                    ? 'background:#3b82f6;color:white'
-                    : 'background:#f1f5f9;color:#64748b'"
+                  :class="catFilter === cat ? 'bg-sys-blueDim text-sys-blue' : 'bg-surface-2 text-label-2'"
                   @click="catFilter = cat">
             {{ cat }} ({{ catCount(cat) }})
           </button>
@@ -76,7 +52,7 @@
           <SignalCard v-for="s in filteredSignals" :key="s.code" :signal="s"
                       @trade="$emit('open-trade', $event)" />
         </div>
-        <div v-else class="text-center py-10 text-gray-400 text-sm">
+        <div v-else class="text-center py-10 text-label-2 text-sm">
           「{{ catFilter }}」板块今日无信号
         </div>
       </template>
@@ -89,6 +65,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api, fetchRealtimePrice } from '../api.js'
 import { store } from '../store.js'
 import SignalCard from './SignalCard.vue'
+import BaseCard   from './base/BaseCard.vue'
+import BaseButton from './base/BaseButton.vue'
+import StatCard   from './base/StatCard.vue'
+import { Loader2, Rocket, CircleDashed } from '@lucide/vue'
 
 const emit = defineEmits(['open-trade'])
 
@@ -96,16 +76,6 @@ const emit = defineEmits(['open-trade'])
 const job = ref({ status: 'idle', signal_count: 0, started_at: null, finished_at: null, log: [], error: null })
 let _pollTimer = null
 
-const triggerBannerStyle = computed(() => {
-  const s = job.value.status
-  if (s === 'running') return 'background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:white'
-  if (s === 'done')    return 'background:linear-gradient(135deg,#064e3b,#059669);color:white'
-  if (s === 'error')   return 'background:linear-gradient(135deg,#7f1d1d,#ef4444);color:white'
-  return 'background:#f1f5f9;border:1px solid #e2e8f0'
-})
-const triggerTextStyle = computed(() =>
-  ['running', 'done', 'error'].includes(job.value.status) ? 'color:white' : 'color:#374151'
-)
 const triggerTitle = computed(() => {
   const s = job.value.status
   if (s === 'running') return '⟳ 正在生成信号，更新行情数据中…'
@@ -120,18 +90,17 @@ const triggerSub = computed(() => {
   if (s === 'error')   return `失败于 ${job.value.finished_at}`
   return '更新所有 ETF 行情数据并重新生成今日做多信号'
 })
-const triggerBtnStyle = computed(() => {
+const triggerBtnVariant = computed(() => {
   const s = job.value.status
-  if (s === 'running') return 'background:rgba(255,255,255,0.2);color:white;cursor:not-allowed'
-  if (['done', 'error'].includes(s)) return 'background:rgba(255,255,255,0.2);color:white'
-  return 'background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:white'
+  if (s === 'error') return 'red'
+  return 'primary'
 })
 const triggerBtnLabel = computed(() => {
   const s = job.value.status
   if (s === 'running') return '生成中…'
   if (s === 'done')    return '再次触发'
   if (s === 'error')   return '重试'
-  return '🚀 立即生成'
+  return '立即生成'
 })
 
 async function runSignals() {

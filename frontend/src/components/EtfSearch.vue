@@ -5,8 +5,8 @@
       type="text"
       :placeholder="placeholder"
       :readonly="readonly"
-      :class="['w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
-               readonly ? 'bg-gray-50 text-gray-400' : '']"
+      :class="['w-full rounded-lg px-3 py-2 text-sm border border-transparent bg-surface-2 text-label-1 focus:outline-none focus:ring-2 focus:ring-sys-blue',
+               readonly ? 'text-label-2' : '']"
       @input="onInput"
       @focus="open = true"
       @blur="onBlur"
@@ -15,15 +15,15 @@
     <!-- Dropdown -->
     <div
       v-if="open && results.length"
-      class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto"
+      class="absolute z-50 w-full bg-surface-1 border border-hairline rounded-lg shadow-glass mt-1 max-h-48 overflow-y-auto"
     >
       <div
         v-for="[code, name] in results" :key="code"
-        class="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-50 last:border-0"
+        class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 cursor-pointer text-sm border-b border-hairline last:border-0"
         @mousedown.prevent="select(code, name)"
       >
-        <span class="font-mono font-semibold text-gray-800 w-16 flex-shrink-0">{{ code }}</span>
-        <span class="text-gray-500 truncate">{{ name }}</span>
+        <span class="font-mono font-semibold text-label-1 w-16 flex-shrink-0">{{ code }}</span>
+        <span class="text-label-2 truncate">{{ name }}</span>
       </div>
     </div>
   </div>

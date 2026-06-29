@@ -12,7 +12,7 @@
                 :class="saving ? 'opacity-50 cursor-not-allowed' : ''"
                 :disabled="saving"
                 @click="saveAll">
-          {{ saving ? '保存中…' : '💾 保存所有设置' }}
+          <Save :size="14" /> {{ saving ? '保存中…' : '保存所有设置' }}
         </button>
       </div>
     </div>
@@ -21,8 +21,8 @@
     <div class="content-wrap">
 
       <!-- Status banners -->
-      <div v-if="errMsg" class="banner banner-error">⚠ {{ errMsg }}</div>
-      <div v-if="okMsg"  class="banner banner-ok">✓ {{ okMsg }}</div>
+      <div v-if="errMsg" class="banner banner-error"><TriangleAlert :size="14" /> {{ errMsg }}</div>
+      <div v-if="okMsg"  class="banner banner-ok"><Check :size="14" /> {{ okMsg }}</div>
 
       <!-- SECTION 1: Candidate Filter -->
       <div class="card">
@@ -50,7 +50,7 @@
             <input type="range" v-model.number="cfg.prob_threshold"
                    min="0.30" max="0.95" step="0.01"
                    class="range-input w-full" />
-            <div class="flex justify-between text-xs mt-1 text-gray-400">
+            <div class="flex justify-between text-xs mt-1 text-label-3">
               <span>30% 宽松</span>
               <span>默认 50%</span>
               <span>95% 严格</span>
@@ -76,14 +76,14 @@
                 <div class="param-label">止损线</div>
                 <div class="param-desc">持仓浮亏超过此比例时，生成卖出建议</div>
               </div>
-              <div class="big-value" style="color:#dc2626">
+              <div class="big-value" style="color:var(--sys-red)">
                 {{ (cfg.stop_loss * 100).toFixed(0) }}<span class="big-value-unit">%</span>
               </div>
             </div>
             <input type="range" v-model.number="cfg.stop_loss"
                    min="0.01" max="0.20" step="0.01"
                    class="range-input range-red w-full" />
-            <div class="flex justify-between text-xs mt-1 text-gray-400">
+            <div class="flex justify-between text-xs mt-1 text-label-3">
               <span>1% 紧止损</span>
               <span>默认 5%</span>
               <span>20% 宽止损</span>
@@ -99,14 +99,14 @@
                 <div class="param-label">止盈线</div>
                 <div class="param-desc">持仓浮盈超过此比例时，生成卖出建议</div>
               </div>
-              <div class="big-value" style="color:#059669">
+              <div class="big-value" style="color:var(--sys-green)">
                 {{ (cfg.take_profit * 100).toFixed(0) }}<span class="big-value-unit">%</span>
               </div>
             </div>
             <input type="range" v-model.number="cfg.take_profit"
                    min="0.03" max="0.50" step="0.01"
                    class="range-input range-green w-full" />
-            <div class="flex justify-between text-xs mt-1 text-gray-400">
+            <div class="flex justify-between text-xs mt-1 text-label-3">
               <span>3% 保守</span>
               <span>默认 8%</span>
               <span>50% 宽松</span>
@@ -124,7 +124,7 @@
                 {{ code }}
                 <button class="chip-remove" @click="removeBlacklist(code)">×</button>
               </div>
-              <div v-if="!cfg.blacklist.length" class="text-xs text-gray-400 py-1">
+              <div v-if="!cfg.blacklist.length" class="text-xs text-label-3 py-1">
                 暂无黑名单项
               </div>
             </div>
@@ -133,7 +133,7 @@
                      placeholder="输入 6 位代码，例：159869"
                      class="input flex-1 px-3 py-2 text-sm"
                      @keydown.enter="addBlacklist" />
-              <button class="btn-danger" @click="addBlacklist">+ 加入黑名单</button>
+              <button class="btn-danger" @click="addBlacklist"><Plus :size="13" /> 加入黑名单</button>
             </div>
           </div>
 
@@ -143,20 +143,22 @@
       <!-- SECTION 2: Intraday Confirmation -->
       <div class="card">
         <div class="card-header">
-          <span class="section-num" style="background:#ede9fe;color:#7c3aed">02</span>
+          <span class="section-num" style="background:rgba(139,92,246,0.16);color:#8b5cf6">02</span>
           <div class="flex-1 min-w-0">
             <div class="section-title">盘中确认阈值</div>
             <div class="section-sub">4 个交易节点的过滤参数</div>
           </div>
           <div class="flex items-center gap-3">
-            <div v-if="calibrated.calibrated_at" class="text-xs text-gray-400">
+            <div v-if="calibrated.calibrated_at" class="text-xs text-label-3">
               上次校准：{{ calibrated.calibrated_at }}
             </div>
             <button class="btn-outline"
                     :class="calibrating ? 'opacity-50 cursor-not-allowed' : ''"
                     :disabled="calibrating"
                     @click="recalibrate">
-              {{ calibrating ? '⏳ 校准中…' : '🔄 重新自动校准' }}
+              <Loader2 v-if="calibrating" :size="13" class="animate-spin" />
+              <RefreshCw v-else :size="13" />
+              {{ calibrating ? '校准中…' : '重新自动校准' }}
             </button>
           </div>
         </div>
@@ -184,11 +186,11 @@
           </div>
         </div>
         <div v-else class="warn-bar">
-          ⚠ 尚未进行自动校准，当前使用默认值。建议点击「重新自动校准」。
+          <TriangleAlert :size="13" /> 尚未进行自动校准，当前使用默认值。建议点击「重新自动校准」。
         </div>
 
         <!-- Threshold node groups -->
-        <div class="divide-y divide-gray-100">
+        <div class="divide-y divide-hairline">
           <div v-for="group in thresholdGroups" :key="group.node" class="node-group">
             <div class="node-header">
               <span class="node-badge" :style="`background:${group.badgeBg};color:${group.color}`">
@@ -202,13 +204,13 @@
                   <div class="param-card-label">{{ param.label }}</div>
                   <div class="param-card-desc">{{ param.desc }}</div>
                   <div class="param-auto" v-if="calibrated[param.key] != null">
-                    自动值：<span class="font-semibold text-blue-600">{{ calibrated[param.key].toFixed(2) }}</span>
-                    <span class="text-gray-400"> {{ param.unit }}</span>
+                    自动值：<span class="font-semibold text-sys-blue">{{ calibrated[param.key].toFixed(2) }}</span>
+                    <span class="text-label-3"> {{ param.unit }}</span>
                   </div>
                 </div>
                 <div class="flex flex-col items-end gap-2">
                   <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                    <span class="text-xs text-gray-400">手动覆盖</span>
+                    <span class="text-xs text-label-3">手动覆盖</span>
                     <div class="toggle" :class="hasOverride(param.key) ? 'toggle-on' : ''"
                          @click="toggleOverride(param.key)">
                       <div class="toggle-thumb"></div>
@@ -219,7 +221,7 @@
                          @input="setOverride(param.key, $event.target.value)"
                          type="number" :step="param.step || 0.01"
                          class="input w-24 px-2 py-1.5 text-sm text-right" />
-                  <div v-else class="text-xs text-gray-400">自动</div>
+                  <div v-else class="text-xs text-label-3">自动</div>
                 </div>
               </div>
             </div>
@@ -232,7 +234,7 @@
         <div class="card-body">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-              <span class="section-num" style="background:#dcfce7;color:#16a34a">03</span>
+              <span class="section-num" style="background:rgba(34,197,94,0.16);color:#22c55e">03</span>
               <div>
                 <div class="param-label">自动校准回望周期</div>
                 <div class="param-desc">校准时参考最近多少个交易日的市场数据</div>
@@ -241,7 +243,7 @@
             <div class="flex items-center gap-2">
               <input v-model.number="lookback" type="number" min="5" max="120"
                      class="input w-20 px-3 py-2 text-sm text-center" />
-              <span class="text-sm text-gray-400">个交易日</span>
+              <span class="text-sm text-label-2">个交易日</span>
             </div>
           </div>
         </div>
@@ -250,24 +252,26 @@
       <!-- SECTION 4: Model Version Management -->
       <div class="card">
         <div class="card-header">
-          <span class="section-num" style="background:#fef9c3;color:#a16207">04</span>
+          <span class="section-num" style="background:rgba(245,158,11,0.16);color:#f59e0b">04</span>
           <div class="flex-1 min-w-0">
             <div class="section-title">模型版本管理</div>
             <div class="section-sub">每次训练后自动留存历史版本，支持一键回滚</div>
           </div>
           <button class="btn-outline" @click="loadVersions" :disabled="versionsLoading">
-            {{ versionsLoading ? '⏳' : '🔄 刷新' }}
+            <Loader2 v-if="versionsLoading" :size="13" class="animate-spin" />
+            <RefreshCw v-else :size="13" />
+            刷新
           </button>
         </div>
 
         <!-- Empty state -->
         <div v-if="!versionsLoading && versions.length === 0"
-             class="card-body text-sm text-gray-400">
+             class="card-body text-sm text-label-3">
           暂无版本记录（模型训练后将自动保存版本文件）
         </div>
 
         <!-- Version list -->
-        <div v-else class="divide-y divide-gray-100">
+        <div v-else class="divide-y divide-hairline">
           <div v-for="v in versions" :key="v.filename"
                class="version-row" :class="v.is_active ? 'version-row-active' : ''">
             <div class="flex-1 min-w-0">
@@ -283,17 +287,18 @@
                       class="btn-outline py-1 px-3 text-xs"
                       :disabled="activating === v.filename"
                       @click="activateVersion(v.filename)">
-                {{ activating === v.filename ? '⏳' : '激活' }}
+                <Loader2 v-if="activating === v.filename" :size="12" class="animate-spin" />
+                <span v-else>激活</span>
               </button>
             </div>
           </div>
         </div>
 
         <!-- Rollback shortcut -->
-        <div v-if="prevVersion" class="card-body border-t border-gray-100">
+        <div v-if="prevVersion" class="card-body border-t border-hairline">
           <button class="rollback-btn" :disabled="activating !== null"
                   @click="rollback">
-            ↩ 回滚到上一版本：{{ prevVersion.filename }}
+            <Undo2 :size="13" /> 回滚到上一版本：{{ prevVersion.filename }}
           </button>
         </div>
       </div>
@@ -305,6 +310,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { api } from '../api.js'
+import { Save, TriangleAlert, Check, Plus, Loader2, RefreshCw, Undo2 } from '@lucide/vue'
 
 const cfg = reactive({
   prob_threshold: 0.50,
@@ -335,7 +341,7 @@ const prevVersion = computed(() => {
 const thresholdGroups = [
   {
     node: 'open', label: '开盘竞价', time: '09:25',
-    color: '#0284c7', badgeBg: '#e0f2fe',
+    color: '#0ea5e9', badgeBg: 'rgba(14,165,233,0.16)',
     params: [
       { key: 'open_vol_ratio_min', label: '量比下限', desc: '开盘量比须超过此值',  unit: 'x',  step: 0.05 },
       { key: 'open_pct_min',       label: '涨幅下限', desc: '开盘涨幅须超过此值',  unit: '%',  step: 0.1  },
@@ -343,7 +349,7 @@ const thresholdGroups = [
   },
   {
     node: 'amend', label: '午盘收盘前', time: '11:25',
-    color: '#7c3aed', badgeBg: '#ede9fe',
+    color: '#8b5cf6', badgeBg: 'rgba(139,92,246,0.16)',
     params: [
       { key: 'amend_pct_min', label: '涨幅下限', desc: '午盘有效涨幅下限',         unit: '%', step: 0.05 },
       { key: 'amend_pct_max', label: '涨幅上限', desc: '午盘过热上限，超过则不追', unit: '%', step: 0.1  },
@@ -351,7 +357,7 @@ const thresholdGroups = [
   },
   {
     node: 'pm', label: '下午开盘', time: '13:05',
-    color: '#16a34a', badgeBg: '#dcfce7',
+    color: '#22c55e', badgeBg: 'rgba(34,197,94,0.16)',
     params: [
       { key: 'pm_pct_min', label: '涨幅下限', desc: '下午开盘涨幅须超过此值', unit: '%', step: 0.05 },
       { key: 'pm_pct_max', label: '涨幅上限', desc: '下午开盘过热上限',       unit: '%', step: 0.1  },
@@ -359,7 +365,7 @@ const thresholdGroups = [
   },
   {
     node: 'close', label: '尾盘', time: '14:50',
-    color: '#b45309', badgeBg: '#fef3c7',
+    color: '#f59e0b', badgeBg: 'rgba(245,158,11,0.16)',
     params: [
       { key: 'close_strong_pct',   label: '强势门槛', desc: '尾盘涨幅超过此值视为强势',  unit: '%', step: 0.1 },
       { key: 'close_dd_threshold', label: '回落警告', desc: '从高点回落超过此值发出警告', unit: '%', step: 0.1 },
@@ -481,13 +487,14 @@ onMounted(() => { load(); loadVersions() })
 <style scoped>
 .model-page {
   min-height: 100%;
-  background: #f8fafc;
+  background: transparent;
 }
 
 /* ── Header ── */
 .page-header {
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--hairline);
   margin-bottom: 24px;
 }
 .header-inner {
@@ -502,11 +509,11 @@ onMounted(() => { load(); loadVersions() })
 .page-title {
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--label-1);
 }
 .page-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: var(--label-2);
   margin-top: 2px;
 }
 
@@ -526,15 +533,20 @@ onMounted(() => { load(); loadVersions() })
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.banner-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.banner-ok    { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.banner-error { background: var(--sys-red-dim);   color: var(--sys-red); }
+.banner-ok    { background: var(--sys-green-dim); color: var(--sys-green); }
 
 /* ── Card ── */
 .card {
-  background: #fff;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
   border-radius: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   overflow: hidden;
 }
 .card-header {
@@ -542,37 +554,37 @@ onMounted(() => { load(); loadVersions() })
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--hairline);
   flex-wrap: wrap;
 }
 .card-body { padding: 20px; }
 .section-num {
   width: 32px; height: 32px;
   border-radius: 8px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--sys-blue-dim);
+  color: var(--sys-blue);
   font-size: 12px;
   font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.section-title { font-size: 14px; font-weight: 600; color: #1e293b; }
-.section-sub   { font-size: 12px; color: #94a3b8; margin-top: 1px; }
+.section-title { font-size: 14px; font-weight: 600; color: var(--label-1); }
+.section-sub   { font-size: 12px; color: var(--label-2); margin-top: 1px; }
 
 /* ── Prob threshold ── */
 .big-value {
   font-size: 32px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--sys-blue);
   line-height: 1;
 }
-.big-value-unit { font-size: 18px; font-weight: 500; color: #94a3b8; }
+.big-value-unit { font-size: 18px; font-weight: 500; color: var(--label-2); }
 .range-input {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
   border-radius: 3px;
-  background: #e2e8f0;
+  background: var(--surface-3);
   outline: none;
   cursor: pointer;
 }
@@ -580,81 +592,90 @@ onMounted(() => { load(); loadVersions() })
   -webkit-appearance: none;
   width: 18px; height: 18px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--sys-blue);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(37,99,235,0.3);
 }
-.range-red::-webkit-slider-thumb  { background: #dc2626; box-shadow: 0 1px 4px rgba(220,38,38,0.3); }
-.range-green::-webkit-slider-thumb { background: #059669; box-shadow: 0 1px 4px rgba(5,150,105,0.3); }
-.band-active   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-.band-inactive { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+.range-red::-webkit-slider-thumb  { background: var(--sys-red); box-shadow: 0 1px 4px rgba(220,38,38,0.3); }
+.range-green::-webkit-slider-thumb { background: var(--sys-green); box-shadow: 0 1px 4px rgba(5,150,105,0.3); }
+.band-active   { background: var(--sys-blue-dim); color: var(--sys-blue); border: 1px solid transparent; }
+.band-inactive { background: var(--surface-2); color: var(--label-2); border: 1px solid transparent; }
 
 /* ── Divider ── */
-.divider { border: none; border-top: 1px solid #f1f5f9; margin: 0; }
+.divider { border: none; border-top: 1px solid var(--hairline); margin: 0; }
 
 /* ── Blacklist chips ── */
 .chip {
   display: flex; align-items: center; gap: 4px;
   padding: 4px 10px;
-  background: #f1f5f9;
+  background: var(--surface-2);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #475569;
+  color: var(--label-2);
 }
 .chip-remove {
-  color: #94a3b8;
+  color: var(--label-3);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
   margin-left: 2px;
 }
-.chip-remove:hover { color: #dc2626; }
+.chip-remove:hover { color: var(--sys-red); }
 
 /* ── Inputs / buttons ── */
 .input {
-  border: 1px solid #e2e8f0;
+  border: 1px solid transparent;
   border-radius: 8px;
   outline: none;
-  color: #1e293b;
-  background: #fff;
+  color: var(--label-1);
+  background: var(--surface-2);
   transition: border-color 0.15s;
 }
-.input:focus { border-color: #2563eb; }
+.input:focus { border-color: var(--sys-blue); }
 .btn-save {
   padding: 9px 20px;
   border-radius: 9px;
-  background: #2563eb;
+  background: var(--sys-blue);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.btn-save:hover:not(:disabled) { background: #1d4ed8; }
+.btn-save:hover:not(:disabled) { opacity: .9; }
 .btn-outline {
   padding: 7px 14px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #475569;
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--label-2);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
-.btn-outline:hover:not(:disabled) { border-color: #94a3b8; color: #1e293b; }
+.btn-outline:hover:not(:disabled) { border-color: var(--label-3); color: var(--label-1); }
 .btn-danger {
   padding: 8px 14px;
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--sys-red-dim);
+  color: var(--sys-red);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid #fecaca;
-  transition: background 0.15s;
+  border: 1px solid transparent;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
-.btn-danger:hover { background: #fee2e2; }
+.btn-danger:hover { opacity: .85; }
 
 /* ── Market stats ── */
 .market-stats {
@@ -662,20 +683,22 @@ onMounted(() => { load(); loadVersions() })
   align-items: center;
   gap: 0;
   padding: 10px 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--hairline);
 }
 .market-stat { display: flex; flex-direction: column; gap: 2px; padding: 0 16px; }
 .market-stat:first-child { padding-left: 0; }
-.stat-divider { width: 1px; height: 30px; background: #e2e8f0; }
-.stat-label { font-size: 10px; color: #94a3b8; font-weight: 500; }
-.stat-val   { font-size: 14px; font-weight: 700; color: #1e293b; }
+.stat-divider { width: 1px; height: 30px; background: var(--hairline); }
+.stat-label { font-size: 10px; color: var(--label-2); font-weight: 500; }
+.stat-val   { font-size: 14px; font-weight: 700; color: var(--label-1); }
 .warn-bar {
   padding: 10px 20px;
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--sys-orange-dim);
+  color: var(--sys-orange);
   font-size: 12px;
-  border-bottom: 1px solid #fef3c7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ── Node groups ── */
@@ -687,7 +710,7 @@ onMounted(() => { load(); loadVersions() })
   font-size: 12px;
   font-weight: 700;
 }
-.node-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+.node-label { font-size: 13px; font-weight: 600; color: var(--label-1); }
 
 /* ── Param cards ── */
 .param-card {
@@ -695,15 +718,15 @@ onMounted(() => { load(); loadVersions() })
   align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
-  background: #f8fafc;
+  background: var(--surface-2);
   border-radius: 10px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--hairline);
 }
-.param-card-label { font-size: 12px; font-weight: 600; color: #334155; }
-.param-card-desc  { font-size: 11px; color: #94a3b8; margin-top: 1px; }
-.param-auto { font-size: 11px; color: #64748b; margin-top: 4px; }
-.param-label { font-size: 13px; font-weight: 600; color: #1e293b; }
-.param-desc  { font-size: 12px; color: #64748b; margin-top: 1px; }
+.param-card-label { font-size: 12px; font-weight: 600; color: var(--label-1); }
+.param-card-desc  { font-size: 11px; color: var(--label-2); margin-top: 1px; }
+.param-auto { font-size: 11px; color: var(--label-2); margin-top: 4px; }
+.param-label { font-size: 13px; font-weight: 600; color: var(--label-1); }
+.param-desc  { font-size: 12px; color: var(--label-2); margin-top: 1px; }
 
 /* ── Model version list ── */
 .version-row {
@@ -713,55 +736,59 @@ onMounted(() => { load(); loadVersions() })
   padding: 12px 20px;
   transition: background 0.1s;
 }
-.version-row:hover { background: #f8fafc; }
-.version-row-active { background: #eff6ff; }
-.version-row-active:hover { background: #dbeafe; }
+.version-row:hover { background: var(--surface-2); }
+.version-row-active { background: var(--sys-blue-dim); }
+.version-row-active:hover { background: var(--sys-blue-dim); }
 .version-name {
   font-size: 13px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--label-1);
   font-family: ui-monospace, monospace;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.version-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.version-meta { font-size: 11px; color: var(--label-2); margin-top: 2px; }
 .version-tag {
   font-size: 10px;
   font-family: inherit;
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background: var(--surface-3);
+  color: var(--label-2);
+  border: 1px solid transparent;
 }
 .badge-active {
   font-size: 11px;
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 6px;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background: var(--sys-blue-dim);
+  color: var(--sys-blue);
+  border: 1px solid transparent;
 }
 .rollback-btn {
   width: 100%;
   padding: 9px 16px;
   border-radius: 9px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--label-2);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   text-align: center;
   transition: background 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .rollback-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #1e293b;
+  background: var(--surface-3);
+  border-color: var(--label-3);
+  color: var(--label-1);
 }
 .rollback-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -769,12 +796,12 @@ onMounted(() => { load(); loadVersions() })
 .toggle {
   width: 34px; height: 20px;
   border-radius: 10px;
-  background: #e2e8f0;
+  background: var(--surface-3);
   position: relative;
   cursor: pointer;
   transition: background 0.2s;
 }
-.toggle-on { background: #2563eb; }
+.toggle-on { background: var(--sys-blue); }
 .toggle-thumb {
   position: absolute;
   top: 3px; left: 3px;

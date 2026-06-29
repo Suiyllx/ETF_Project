@@ -2,136 +2,86 @@
   <div class="flex h-full overflow-hidden">
 
     <!-- ── Left sidebar ──────────────────────────────────── -->
-    <aside class="w-56 flex-shrink-0 flex flex-col"
-           style="background:#0f172a;border-right:1px solid rgba(255,255,255,0.05)">
-      <div class="px-4 py-4 flex items-center justify-between flex-shrink-0"
-           style="border-bottom:1px solid rgba(255,255,255,0.05)">
-        <span class="text-xs font-semibold tracking-widest uppercase"
-              style="color:#475569;letter-spacing:.1em">账户</span>
+    <aside class="w-56 flex-shrink-0 flex flex-col bg-surface-1 border-r border-hairline">
+      <div class="px-4 py-4 flex items-center justify-between flex-shrink-0 border-b border-hairline">
+        <span class="text-xs font-semibold tracking-widest uppercase text-label-3">账户</span>
         <button v-if="store.isAdmin"
-                class="text-xs px-2.5 py-1 rounded-lg font-medium transition"
-                style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25)"
-                @click="openAddUser">+ 新增</button>
+                class="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium transition bg-sys-blueDim text-sys-blue hover:opacity-80"
+                @click="openAddUser"><Plus :size="13" /> 新增</button>
       </div>
 
       <div class="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
-        <p v-if="!store.users.length" class="text-center py-8 text-sm" style="color:#334155">暂无用户</p>
+        <p v-if="!store.users.length" class="text-center py-8 text-sm text-label-3">暂无用户</p>
         <div v-for="u in store.users" :key="u.id"
              class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all"
-             :style="selId === u.id
-               ? 'background:rgba(59,130,246,0.14);border:1px solid rgba(59,130,246,0.3)'
-               : 'border:1px solid transparent'"
+             :class="selId === u.id ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
              @click="selectUser(u.id)">
           <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                :style="{ background: avatarColor(u.name) }">
             {{ u.name[0]?.toUpperCase() }}
           </div>
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-medium truncate" style="color:#e2e8f0">{{ u.name }}</div>
-            <div class="text-xs truncate" style="color:#475569">
+            <div class="text-sm font-medium truncate text-label-1">{{ u.name }}</div>
+            <div class="text-xs truncate text-label-2">
               {{ u.email ? u.email.split('@')[0] + '@…' : '未设置邮箱' }}
             </div>
           </div>
-          <div class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-               :style="u.active ? 'background:#10b981' : 'background:#334155'"></div>
+          <div class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="u.active ? 'bg-sys-green' : 'bg-label-3'"></div>
         </div>
       </div>
     </aside>
 
     <!-- ── Main area ──────────────────────────────────────── -->
-    <div class="flex-1 overflow-y-auto" style="background:#f1f5f9">
+    <div class="flex-1 overflow-y-auto">
 
-      <div v-if="!selId" class="flex flex-col items-center justify-center h-full gap-3"
-           style="color:#94a3b8">
-        <div class="text-6xl">👈</div>
-        <p class="text-lg font-semibold" style="color:#64748b">从左侧选择账户</p>
+      <div v-if="!selId" class="flex flex-col items-center justify-center h-full gap-3 text-label-2">
+        <ArrowLeft :size="40" class="opacity-50" />
+        <p class="text-lg font-semibold text-label-1">从左侧选择账户</p>
         <p v-if="store.isAdmin" class="text-sm">或点击「+ 新增」创建用户</p>
       </div>
 
       <template v-else-if="selUser && pf">
         <!-- User header banner -->
-        <div class="px-6 py-5 flex items-center justify-between"
-             style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#1d4ed8 100%)">
+        <BaseCard tag="div" class="m-6 mb-0 px-6 py-5 flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
                  :style="{ background: avatarColor(selUser.name) }">
               {{ selUser.name[0]?.toUpperCase() }}
             </div>
             <div>
               <div class="flex items-center gap-2 mb-0.5">
-                <h2 class="text-xl font-bold text-white">{{ selUser.name }}</h2>
-                <span v-if="selUser.role === 'admin'"
-                      class="text-xs px-2 py-0.5 rounded-full font-semibold"
-                      style="background:rgba(251,191,36,0.18);color:#fbbf24;border:1px solid rgba(251,191,36,0.35)">
-                  管理员
-                </span>
+                <h2 class="text-xl font-bold text-label-1">{{ selUser.name }}</h2>
+                <Badge v-if="selUser.role === 'admin'" tone="orange" label="管理员" />
               </div>
-              <p class="text-sm" style="color:#93c5fd">{{ selUser.email || '未设置邮箱' }}</p>
+              <p class="text-sm text-label-2">{{ selUser.email || '未设置邮箱' }}</p>
             </div>
           </div>
           <div v-if="store.isAdmin" class="flex gap-2">
-            <button v-if="selId !== store.currentUser?.id"
-                    class="text-xs px-3 py-1.5 rounded-lg font-medium transition"
-                    style="background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)"
-                    @click="resetPassword(selUser.id)">重置密码</button>
-            <button class="text-xs px-3 py-1.5 rounded-lg font-medium transition"
-                    style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3)"
-                    @click="deleteUser(selUser.id)">删除账户</button>
+            <BaseButton v-if="selId !== store.currentUser?.id" variant="ghost" size="sm" @click="resetPassword(selUser.id)">
+              重置密码
+            </BaseButton>
+            <BaseButton variant="red" size="sm" @click="deleteUser(selUser.id)">删除账户</BaseButton>
           </div>
-        </div>
+        </BaseCard>
 
         <!-- Metric cards -->
         <div class="grid grid-cols-5 gap-3 px-6 pt-5">
-          <div class="rounded-2xl p-4 text-white shadow-lg"
-               style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
-            <div class="text-xs font-medium mb-2 opacity-70">总资产</div>
-            <div class="text-xl font-bold">{{ fmtCash(totalAssets) }}</div>
-            <div class="text-xs mt-1 opacity-60">现金 + 持仓市值</div>
-          </div>
-          <div class="rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
-               style="background:linear-gradient(135deg,#064e3b,#059669)">
-            <div class="text-xs font-medium mb-2 opacity-70">可用现金</div>
-            <div class="text-xl font-bold">{{ fmtCash(pf.cash) }}</div>
-            <button class="absolute top-3.5 right-3.5 text-xs px-2.5 py-1 rounded-lg font-semibold transition"
-                    style="background:rgba(255,255,255,0.18);backdrop-filter:blur(4px)"
+          <StatCard label="总资产" :value="fmtCash(totalAssets)" accent="blue" />
+          <div class="relative">
+            <StatCard label="可用现金" :value="fmtCash(pf.cash)" accent="green" />
+            <button class="absolute top-3 right-3 text-xs px-2.5 py-1 rounded-lg font-semibold transition bg-surface-3 text-label-1 hover:bg-sys-blueDim hover:text-sys-blue"
                     @click="showDepositModal = true">+ 入金</button>
-            <div class="text-xs mt-1 opacity-60">可投资资金</div>
           </div>
-          <div class="rounded-2xl p-4 text-white shadow-lg"
-               style="background:linear-gradient(135deg,#3b0764,#7c3aed)">
-            <div class="text-xs font-medium mb-2 opacity-70">持仓市值</div>
-            <div class="text-xl font-bold">{{ fmtCash(totalMarketValue) }}</div>
-            <div class="text-xs mt-1 opacity-60">{{ pricesLoading ? '行情加载中…' : '按实时价估算' }}</div>
-          </div>
-          <div class="rounded-2xl p-4 text-white shadow-lg transition-all" :style="profitCardStyle">
-            <div class="text-xs font-medium mb-2 opacity-70">总浮盈</div>
-            <div class="text-xl font-bold">
-              <span v-if="pricesLoading">…</span>
-              <span v-else>{{ fmtProfit(totalProfit) }}</span>
-            </div>
-            <div class="text-xs mt-1 opacity-60">未实现盈亏</div>
-          </div>
-          <div class="rounded-2xl p-4 text-white shadow-lg"
-               style="background:linear-gradient(135deg,#78350f,#d97706)">
-            <div class="text-xs font-medium mb-2 opacity-70">持仓品种</div>
-            <div class="text-xl font-bold">
-              {{ pf.positions?.length ?? 0 }}
-              <span class="text-base font-normal opacity-70">只</span>
-            </div>
-            <div class="text-xs mt-1 opacity-60">ETF 标的数量</div>
-          </div>
+          <StatCard label="持仓市值" :value="fmtCash(totalMarketValue)"
+                    :delta="pricesLoading ? '行情加载中…' : '按实时价估算'" trend="neutral" />
+          <StatCard label="总浮盈" :value="pricesLoading ? '…' : fmtProfit(totalProfit)" :accent="profitAccent" />
+          <StatCard label="持仓品种" :value="(pf.positions?.length ?? 0) + ' 只'" />
         </div>
 
         <!-- Tab bar + content -->
         <div class="px-6 pt-5 pb-6">
-          <div class="inline-flex gap-1 bg-white rounded-xl p-1 mb-5 shadow-sm">
-            <button v-for="t in TABS" :key="t.key"
-                    class="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                    :class="tab === t.key ? 'text-white shadow' : 'text-gray-500 hover:text-gray-700'"
-                    :style="tab === t.key ? `background:${t.color}` : ''"
-                    @click="tab = t.key">
-              {{ t.label }}
-            </button>
+          <div class="mb-5">
+            <SegmentControl v-model="tab" :options="TABS" />
           </div>
 
           <!-- 持仓明细 -->
@@ -149,85 +99,76 @@
 
           <!-- 账号设置 -->
           <div v-else-if="tab === 'settings'" class="grid grid-cols-2 gap-4">
-            <div class="bg-white rounded-2xl shadow-sm p-5">
-              <h3 class="font-semibold text-gray-700 text-sm mb-4 pb-3"
-                  style="border-bottom:1px solid #f1f5f9">基本信息</h3>
+            <BaseCard class="p-5">
+              <h3 class="font-semibold text-label-1 text-sm mb-4 pb-3 border-b border-hairline">基本信息</h3>
               <div class="space-y-4">
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">姓名</label>
+                  <label class="block text-xs font-medium text-label-2 mb-1.5">姓名</label>
                   <input v-model="cfg.name" type="text" class="input" />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">邮箱（信号推送）</label>
+                  <label class="block text-xs font-medium text-label-2 mb-1.5">邮箱（信号推送）</label>
                   <input v-model="cfg.email" type="email" class="input" />
                 </div>
-                <label class="flex items-center gap-2.5 text-sm text-gray-600 cursor-pointer select-none">
-                  <input v-model="cfg.active" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
+                <label class="flex items-center gap-2.5 text-sm text-label-2 cursor-pointer select-none">
+                  <input v-model="cfg.active" type="checkbox" class="w-4 h-4 rounded accent-sys-blue" />
                   接收每日推送邮件
                 </label>
               </div>
-            </div>
+            </BaseCard>
 
-            <div class="bg-white rounded-2xl shadow-sm p-5">
-              <h3 class="font-semibold text-gray-700 text-sm mb-4 pb-3"
-                  style="border-bottom:1px solid #f1f5f9">风控参数</h3>
+            <BaseCard class="p-5">
+              <h3 class="font-semibold text-label-1 text-sm mb-4 pb-3 border-b border-hairline">风控参数</h3>
               <div class="space-y-5">
                 <div>
                   <div class="flex justify-between items-center mb-2">
-                    <label class="text-xs font-medium text-gray-500">单只最大仓位</label>
-                    <span class="text-sm font-bold" style="color:#3b82f6">{{ fmtPct(cfg.max_position_pct) }}</span>
+                    <label class="text-xs font-medium text-label-2">单只最大仓位</label>
+                    <span class="text-sm font-bold text-sys-blue">{{ fmtPct(cfg.max_position_pct) }}</span>
                   </div>
                   <input v-model.number="cfg.max_position_pct" type="range"
                          min="0.05" max="0.5" step="0.05"
-                         class="w-full h-1.5 rounded-full cursor-pointer accent-blue-600" />
-                  <div class="flex justify-between text-xs text-gray-300 mt-1"><span>5%</span><span>50%</span></div>
+                         class="w-full h-1.5 rounded-full cursor-pointer accent-sys-blue" />
+                  <div class="flex justify-between text-xs text-label-3 mt-1"><span>5%</span><span>50%</span></div>
                 </div>
                 <div>
                   <div class="flex justify-between items-center mb-2">
-                    <label class="text-xs font-medium text-gray-500">板块最大仓位</label>
-                    <span class="text-sm font-bold" style="color:#3b82f6">{{ fmtPct(cfg.max_sector_pct) }}</span>
+                    <label class="text-xs font-medium text-label-2">板块最大仓位</label>
+                    <span class="text-sm font-bold text-sys-blue">{{ fmtPct(cfg.max_sector_pct) }}</span>
                   </div>
                   <input v-model.number="cfg.max_sector_pct" type="range"
                          min="0.1" max="0.8" step="0.05"
-                         class="w-full h-1.5 rounded-full cursor-pointer accent-blue-600" />
-                  <div class="flex justify-between text-xs text-gray-300 mt-1"><span>10%</span><span>80%</span></div>
+                         class="w-full h-1.5 rounded-full cursor-pointer accent-sys-blue" />
+                  <div class="flex justify-between text-xs text-label-3 mt-1"><span>10%</span><span>80%</span></div>
                 </div>
               </div>
-            </div>
+            </BaseCard>
 
             <div class="col-span-2 flex justify-end">
-              <button class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm transition"
-                      style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)"
-                      @click="saveSettings">保存设置</button>
+              <BaseButton variant="primary" @click="saveSettings">保存设置</BaseButton>
             </div>
 
-            <div v-if="selId === store.currentUser?.id"
-                 class="col-span-2 bg-white rounded-2xl shadow-sm p-5">
-              <h3 class="font-semibold text-gray-700 text-sm mb-4 pb-3"
-                  style="border-bottom:1px solid #f1f5f9">修改密码</h3>
+            <BaseCard v-if="selId === store.currentUser?.id" class="col-span-2 p-5">
+              <h3 class="font-semibold text-label-1 text-sm mb-4 pb-3 border-b border-hairline">修改密码</h3>
               <div class="grid grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">当前密码</label>
+                  <label class="block text-xs font-medium text-label-2 mb-1.5">当前密码</label>
                   <input v-model="pwForm.old" type="password" class="input" autocomplete="current-password" />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">新密码</label>
+                  <label class="block text-xs font-medium text-label-2 mb-1.5">新密码</label>
                   <input v-model="pwForm.new1" type="password" class="input" autocomplete="new-password" />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">确认新密码</label>
+                  <label class="block text-xs font-medium text-label-2 mb-1.5">确认新密码</label>
                   <input v-model="pwForm.new2" type="password" class="input" autocomplete="new-password" />
                 </div>
               </div>
               <div class="flex items-center justify-between mt-4">
-                <span v-if="pwMsg" class="text-sm"
-                      :style="pwMsg.ok ? 'color:#059669' : 'color:#f43f5e'">{{ pwMsg.text }}</span>
-                <span v-else class="text-xs text-gray-400">密码至少 4 位</span>
-                <button class="px-5 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition"
-                        style="background:linear-gradient(135deg,#3b0764,#7c3aed)"
-                        @click="changePassword">修改密码</button>
+                <span v-if="pwMsg" class="text-sm" :class="pwMsg.ok ? 'text-sys-green' : 'text-sys-red'">{{ pwMsg.text }}</span>
+                <span v-else class="text-xs text-label-3">密码至少 4 位</span>
+                <BaseButton variant="primary" size="sm" @click="changePassword">修改密码</BaseButton>
               </div>
-            </div>
+            </BaseCard>
           </div>
 
         </div>
@@ -239,10 +180,10 @@
     <!-- Add User -->
     <Teleport to="body">
       <div v-if="showUserModal" class="modal-overlay">
-        <div class="modal-box" @click.stop>
+        <BaseCard class="modal-box" @click.stop>
           <div class="flex items-center justify-between mb-4">
-            <h3 class="modal-title" style="margin-bottom:0">新增用户</h3>
-            <button class="close-btn" @click="showUserModal = false">✕</button>
+            <h3 class="text-base font-bold text-label-1">新增用户</h3>
+            <button class="close-btn" @click="showUserModal = false"><X :size="16" /></button>
           </div>
           <div class="space-y-3">
             <div><label class="field-label">姓名 *</label>
@@ -251,46 +192,45 @@
               <input v-model="newUser.email" type="email" placeholder="例：user@163.com" class="input" /></div>
             <div><label class="field-label">初始现金（元）</label>
               <input v-model.number="newUser.cash" type="number" class="input" /></div>
-            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-              <input v-model="newUser.active" type="checkbox" /> 立即启用
+            <label class="flex items-center gap-2 text-sm text-label-2 cursor-pointer">
+              <input v-model="newUser.active" type="checkbox" class="accent-sys-blue" /> 立即启用
             </label>
-            <p class="text-xs text-gray-400">初始密码 = 用户名（登录后请通知用户修改）</p>
+            <p class="text-xs text-label-3">初始密码 = 用户名（登录后请通知用户修改）</p>
           </div>
-          <div class="modal-actions">
-            <button class="btn-cancel" @click="showUserModal = false">取消</button>
-            <button class="btn-primary" @click="submitAddUser">创建账户</button>
+          <div class="flex gap-2 mt-5">
+            <BaseButton variant="ghost" class="flex-1" @click="showUserModal = false">取消</BaseButton>
+            <BaseButton variant="primary" class="flex-1" @click="submitAddUser">创建账户</BaseButton>
           </div>
-        </div>
+        </BaseCard>
       </div>
     </Teleport>
 
     <!-- Deposit -->
     <Teleport to="body">
       <div v-if="showDepositModal" class="modal-overlay">
-        <div class="modal-box" style="width:340px" @click.stop>
+        <BaseCard class="modal-box" style="width:340px" @click.stop>
           <div class="flex items-center justify-between mb-4">
-            <h3 class="modal-title" style="margin-bottom:0">增加可用资金</h3>
-            <button class="close-btn" @click="showDepositModal = false">✕</button>
+            <h3 class="text-base font-bold text-label-1">增加可用资金</h3>
+            <button class="close-btn" @click="showDepositModal = false"><X :size="16" /></button>
           </div>
           <div class="space-y-3">
             <div><label class="field-label">当前余额</label>
-              <div class="input bg-gray-50 text-gray-500">{{ fmtCash(pf?.cash ?? 0) }}</div></div>
+              <div class="input text-label-2">{{ fmtCash(pf?.cash ?? 0) }}</div></div>
             <div><label class="field-label">入金金额（元）*</label>
               <input v-model.number="depositAmt" type="number" min="1" step="1000"
                      placeholder="例：50000" class="input" /></div>
             <div v-if="depositAmt > 0" class="flex items-center justify-between text-sm px-1">
-              <span class="text-gray-500">入金后余额</span>
-              <span class="font-bold" style="color:#059669">
+              <span class="text-label-2">入金后余额</span>
+              <span class="font-bold text-sys-green">
                 {{ fmtCash((pf?.cash ?? 0) + Number(depositAmt)) }}
               </span>
             </div>
           </div>
-          <div class="modal-actions">
-            <button class="btn-cancel" @click="showDepositModal = false">取消</button>
-            <button class="btn-primary" style="background:linear-gradient(135deg,#064e3b,#059669);border:none"
-                    @click="submitDeposit">确认入金</button>
+          <div class="flex gap-2 mt-5">
+            <BaseButton variant="ghost" class="flex-1" @click="showDepositModal = false">取消</BaseButton>
+            <BaseButton variant="green" class="flex-1" @click="submitDeposit">确认入金</BaseButton>
           </div>
-        </div>
+        </BaseCard>
       </div>
     </Teleport>
 
@@ -301,13 +241,19 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { store } from '../store.js'
 import { api, fmtCash, fmtPct, todayStr } from '../api.js'
-import PositionTab    from '../components/PositionTab.vue'
-import TransactionTab from '../components/TransactionTab.vue'
+import PositionTab     from '../components/PositionTab.vue'
+import TransactionTab  from '../components/TransactionTab.vue'
+import BaseCard        from '../components/base/BaseCard.vue'
+import BaseButton      from '../components/base/BaseButton.vue'
+import Badge           from '../components/base/Badge.vue'
+import StatCard        from '../components/base/StatCard.vue'
+import SegmentControl  from '../components/base/SegmentControl.vue'
+import { Plus, ArrowLeft, X } from '@lucide/vue'
 
 const TABS = [
-  { key: 'positions',    label: '持仓明细', color: 'linear-gradient(135deg,#1e3a8a,#3b82f6)' },
-  { key: 'transactions', label: '交易记录', color: 'linear-gradient(135deg,#3b0764,#7c3aed)' },
-  { key: 'settings',     label: '账号设置', color: 'linear-gradient(135deg,#1e293b,#475569)' },
+  { key: 'positions',    label: '持仓明细' },
+  { key: 'transactions', label: '交易记录' },
+  { key: 'settings',     label: '账号设置' },
 ]
 
 const AVATAR_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#f43f5e','#84cc16']
@@ -352,12 +298,9 @@ const totalProfit = computed(() =>
   }, 0)
 )
 const totalAssets = computed(() => (pf.value?.cash ?? 0) + totalMarketValue.value)
-const profitCardStyle = computed(() => {
-  if (pricesLoading.value || !Object.keys(marketPrices.value).length)
-    return 'background:linear-gradient(135deg,#374151,#6b7280)'
-  return totalProfit.value >= 0
-    ? 'background:linear-gradient(135deg,#0f766e,#14b8a6)'
-    : 'background:linear-gradient(135deg,#9f1239,#f43f5e)'
+const profitAccent = computed(() => {
+  if (pricesLoading.value || !Object.keys(marketPrices.value).length) return ''
+  return totalProfit.value >= 0 ? 'green' : 'red'
 })
 
 function fmtProfit(v) {
@@ -520,16 +463,11 @@ async function submitDeposit() {
 
 <style scoped>
 .input {
-  @apply w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm
-         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-         transition bg-white;
+  @apply w-full rounded-xl px-3.5 py-2.5 text-sm bg-surface-2 text-label-1 border border-transparent
+         focus:outline-none focus:ring-2 focus:ring-sys-blue focus:border-transparent transition;
 }
-.field-label  { @apply block text-xs font-medium text-gray-500 mb-1.5; }
-.btn-primary  { @apply flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition cursor-pointer border-0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
-.btn-cancel   { @apply flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer hover:bg-gray-50; }
-.close-btn    { @apply w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-lg font-light; }
-.modal-overlay { @apply fixed inset-0 flex items-center justify-center z-50; background: rgba(15,23,42,.6); backdrop-filter: blur(4px); }
-.modal-box    { @apply bg-white rounded-2xl shadow-2xl w-96 p-6; }
-.modal-title  { @apply text-base font-bold text-gray-800 mb-5; }
-.modal-actions { @apply flex gap-2 mt-5; }
+.field-label  { @apply block text-xs font-medium text-label-2 mb-1.5; }
+.close-btn    { @apply w-8 h-8 flex items-center justify-center rounded-lg text-label-2 hover:text-label-1 hover:bg-surface-2 transition-all; }
+.modal-overlay { @apply fixed inset-0 flex items-center justify-center z-50; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+.modal-box    { @apply w-96 p-6; }
 </style>

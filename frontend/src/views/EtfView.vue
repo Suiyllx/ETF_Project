@@ -1,20 +1,14 @@
 <template>
-  <div class="flex h-full overflow-hidden" style="background:#f1f5f9">
+  <div class="flex h-full overflow-hidden app-bg">
 
     <!-- ── Left sidebar ─────────────────────────────────────── -->
-    <aside class="w-56 flex-shrink-0 flex flex-col overflow-hidden"
-           style="background:#0f172a;border-right:1px solid rgba(255,255,255,0.05)">
+    <aside class="w-56 flex-shrink-0 flex flex-col overflow-hidden bg-surface-1 border-r border-hairline">
 
       <!-- Search -->
-      <div class="px-3 pt-3 pb-2 flex-shrink-0"
-           style="border-bottom:1px solid rgba(255,255,255,0.06)">
-        <div class="text-xs font-semibold uppercase tracking-widest mb-2"
-             style="color:#1e3a5f;letter-spacing:.08em">ETF 行情</div>
+      <div class="px-3 pt-3 pb-2 flex-shrink-0 border-b border-hairline">
+        <div class="text-xs font-semibold uppercase tracking-widest mb-2 text-label-3">ETF 行情</div>
         <input v-model="query" placeholder="搜索代码 / 名称"
-               class="w-full px-3 py-1.5 text-sm rounded-xl outline-none"
-               style="background:#1e293b;border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;caret-color:#3b82f6"
-               @focus="e => e.target.style.borderColor='rgba(59,130,246,0.5)'"
-               @blur="e => e.target.style.borderColor='rgba(255,255,255,0.08)'" />
+               class="w-full px-3 py-1.5 text-sm rounded-xl outline-none bg-surface-2 text-label-1 border border-transparent focus:ring-2 focus:ring-sys-blue transition" />
       </div>
 
       <!-- ETF list (grouped) -->
@@ -23,87 +17,79 @@
         <!-- ⭐ 自选 -->
         <template v-if="groups.watch.length">
           <div class="flex items-center gap-1.5 px-2 pt-3 pb-1">
-            <span class="text-xs" style="color:#f59e0b">⭐</span>
-            <span class="text-xs font-semibold" style="color:#78716c">自选</span>
-            <span class="text-xs ml-auto" style="color:#44403c">{{ groups.watch.length }}</span>
+            <Star :size="12" class="text-sys-orange" fill="currentColor" />
+            <span class="text-xs font-semibold text-label-2">自选</span>
+            <span class="text-xs ml-auto text-label-3">{{ groups.watch.length }}</span>
           </div>
           <div v-for="item in groups.watch" :key="item.code"
              class="px-3 py-2 rounded-xl cursor-pointer transition-all mb-0.5"
-             :style="selCode === item.code
-               ? 'background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)'
-               : 'border:1px solid transparent'"
+             :class="selCode === item.code ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
              @click="loadEtf(item.code)">
             <div class="flex items-center justify-between">
-              <div class="text-sm font-medium" style="color:#e2e8f0">{{ item.code }}</div>
-              <div class="flex gap-1">
-                <span class="text-xs" style="color:#f59e0b">⭐</span>
-                <span v-if="item.tags.includes('hold')" class="text-xs px-1.5 py-0.5 rounded-md font-semibold leading-none" style="background:rgba(59,130,246,0.15);color:#60a5fa">持</span>
-                <span v-if="item.tags.includes('signal')" class="text-xs px-1.5 py-0.5 rounded-md font-semibold leading-none" style="background:rgba(5,150,105,0.15);color:#34d399">荐</span>
+              <div class="text-sm font-medium text-label-1">{{ item.code }}</div>
+              <div class="flex gap-1 items-center">
+                <Star :size="11" class="text-sys-orange" fill="currentColor" />
+                <Badge v-if="item.tags.includes('hold')" tone="blue" label="持" />
+                <Badge v-if="item.tags.includes('signal')" tone="green" label="荐" />
               </div>
             </div>
-            <div class="text-xs truncate mt-0.5" style="color:#475569">{{ item.name }}</div>
+            <div class="text-xs truncate mt-0.5 text-label-2">{{ item.name }}</div>
           </div>
         </template>
 
         <!-- 📊 持仓 -->
         <template v-if="groups.hold.length">
           <div class="flex items-center gap-1.5 px-2 pt-3 pb-1">
-            <span class="text-xs" style="color:#3b82f6">📊</span>
-            <span class="text-xs font-semibold" style="color:#334155">持仓</span>
-            <span class="text-xs ml-auto" style="color:#475569">{{ groups.hold.length }}</span>
+            <Wallet :size="12" class="text-sys-blue" />
+            <span class="text-xs font-semibold text-label-2">持仓</span>
+            <span class="text-xs ml-auto text-label-3">{{ groups.hold.length }}</span>
           </div>
           <div v-for="item in groups.hold" :key="item.code"
              class="px-3 py-2 rounded-xl cursor-pointer transition-all mb-0.5"
-             :style="selCode === item.code
-               ? 'background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)'
-               : 'border:1px solid transparent'"
+             :class="selCode === item.code ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
              @click="loadEtf(item.code)">
             <div class="flex items-center justify-between">
-              <div class="text-sm font-medium" style="color:#e2e8f0">{{ item.code }}</div>
+              <div class="text-sm font-medium text-label-1">{{ item.code }}</div>
               <div class="flex gap-1">
-                <span class="text-xs px-1.5 py-0.5 rounded-md font-semibold leading-none" style="background:rgba(59,130,246,0.15);color:#60a5fa">持</span>
-                <span v-if="item.tags.includes('signal')" class="text-xs px-1.5 py-0.5 rounded-md font-semibold leading-none" style="background:rgba(5,150,105,0.15);color:#34d399">荐</span>
+                <Badge tone="blue" label="持" />
+                <Badge v-if="item.tags.includes('signal')" tone="green" label="荐" />
               </div>
             </div>
-            <div class="text-xs truncate mt-0.5" style="color:#475569">{{ item.name }}</div>
+            <div class="text-xs truncate mt-0.5 text-label-2">{{ item.name }}</div>
           </div>
         </template>
 
         <!-- 📡 今日推荐 -->
         <template v-if="groups.signal.length">
           <div class="flex items-center gap-1.5 px-2 pt-3 pb-1">
-            <span class="text-xs" style="color:#059669">📡</span>
-            <span class="text-xs font-semibold" style="color:#334155">今日推荐</span>
-            <span class="text-xs ml-auto" style="color:#475569">{{ groups.signal.length }}</span>
+            <Radar :size="12" class="text-sys-green" />
+            <span class="text-xs font-semibold text-label-2">今日推荐</span>
+            <span class="text-xs ml-auto text-label-3">{{ groups.signal.length }}</span>
           </div>
           <div v-for="item in groups.signal" :key="item.code"
              class="px-3 py-2 rounded-xl cursor-pointer transition-all mb-0.5"
-             :style="selCode === item.code
-               ? 'background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)'
-               : 'border:1px solid transparent'"
+             :class="selCode === item.code ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
              @click="loadEtf(item.code)">
             <div class="flex items-center justify-between">
-              <div class="text-sm font-medium" style="color:#e2e8f0">{{ item.code }}</div>
-              <span class="text-xs px-1.5 py-0.5 rounded-md font-semibold leading-none" style="background:rgba(5,150,105,0.15);color:#34d399">荐</span>
+              <div class="text-sm font-medium text-label-1">{{ item.code }}</div>
+              <Badge tone="green" label="荐" />
             </div>
-            <div class="text-xs truncate mt-0.5" style="color:#475569">{{ item.name }}</div>
+            <div class="text-xs truncate mt-0.5 text-label-2">{{ item.name }}</div>
           </div>
         </template>
 
         <!-- 搜索结果（有搜索词时显示扁平列表） -->
         <template v-if="query && groups.other.length">
           <div class="flex items-center gap-1.5 px-2 pt-3 pb-1">
-            <span class="text-xs font-semibold" style="color:#334155">搜索结果</span>
-            <span class="text-xs ml-auto" style="color:#475569">{{ groups.other.length }}</span>
+            <span class="text-xs font-semibold text-label-2">搜索结果</span>
+            <span class="text-xs ml-auto text-label-3">{{ groups.other.length }}</span>
           </div>
           <div v-for="item in groups.other" :key="item.code"
              class="px-3 py-2 rounded-xl cursor-pointer transition-all mb-0.5"
-             :style="selCode === item.code
-               ? 'background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)'
-               : 'border:1px solid transparent'"
+             :class="selCode === item.code ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
              @click="loadEtf(item.code)">
-            <div class="text-sm font-medium" style="color:#e2e8f0">{{ item.code }}</div>
-            <div class="text-xs truncate mt-0.5" style="color:#475569">{{ item.name }}</div>
+            <div class="text-sm font-medium text-label-1">{{ item.code }}</div>
+            <div class="text-xs truncate mt-0.5 text-label-2">{{ item.name }}</div>
           </div>
         </template>
 
@@ -112,29 +98,25 @@
           <template v-for="group in categoryGroups" :key="group.name">
             <button class="w-full flex items-center gap-1 px-2 pt-3 pb-1 text-left"
                     @click="toggleCat(group.name)">
-              <span class="text-xs font-semibold" style="color:#475569">{{ group.name }}</span>
-              <span class="text-xs ml-auto" style="color:#334155">{{ group.items.length }}</span>
-              <span class="text-xs ml-1" style="color:#475569">
-                {{ collapsedCats.has(group.name) ? '▶' : '▼' }}
-              </span>
+              <span class="text-xs font-semibold text-label-2">{{ group.name }}</span>
+              <span class="text-xs ml-auto text-label-3">{{ group.items.length }}</span>
+              <ChevronDown v-if="!collapsedCats.has(group.name)" :size="12" class="ml-1 text-label-3" />
+              <ChevronRight v-else :size="12" class="ml-1 text-label-3" />
             </button>
             <template v-if="!collapsedCats.has(group.name)">
               <div v-for="item in group.items" :key="item.code"
                    class="px-3 py-2 rounded-xl cursor-pointer transition-all mb-0.5"
-                   :style="selCode === item.code
-                     ? 'background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)'
-                     : 'border:1px solid transparent'"
+                   :class="selCode === item.code ? 'bg-sys-blueDim' : 'hover:bg-surface-2'"
                    @click="loadEtf(item.code)">
-                <div class="text-sm font-medium" style="color:#e2e8f0">{{ item.code }}</div>
-                <div class="text-xs truncate mt-0.5" style="color:#475569">{{ item.name }}</div>
+                <div class="text-sm font-medium text-label-1">{{ item.code }}</div>
+                <div class="text-xs truncate mt-0.5 text-label-2">{{ item.name }}</div>
               </div>
             </template>
           </template>
         </template>
 
         <!-- 搜索无结果 -->
-        <div v-if="query && !hasAnyGroup"
-             class="py-8 text-center text-xs" style="color:#475569">
+        <div v-if="query && !hasAnyGroup" class="py-8 text-center text-xs text-label-3">
           未找到「{{ query }}」
         </div>
       </div>
@@ -144,50 +126,41 @@
     <div class="flex-1 overflow-y-auto p-4 space-y-3">
 
       <!-- Empty state -->
-      <div v-if="!selCode" class="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-        <div class="text-6xl">📈</div>
-        <p class="text-base font-semibold text-gray-400">从左侧选择一只 ETF</p>
-        <p class="text-xs text-gray-300">可点击 ⭐ 将常用 ETF 加入自选</p>
+      <div v-if="!selCode" class="flex flex-col items-center justify-center h-full gap-3 text-label-2">
+        <LineChart :size="48" class="opacity-50" />
+        <p class="text-base font-semibold text-label-1">从左侧选择一只 ETF</p>
+        <p class="text-xs text-label-3">可点击 ⭐ 将常用 ETF 加入自选</p>
       </div>
 
       <!-- Loading -->
-      <div v-else-if="loading" class="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-        <div class="text-4xl animate-pulse">⏳</div>
+      <div v-else-if="loading" class="flex flex-col items-center justify-center h-full gap-3 text-label-2">
+        <Loader2 :size="32" class="animate-spin" />
         <p>加载行情数据…</p>
       </div>
 
       <template v-else-if="hist.length">
 
         <!-- ── Header card ── -->
-        <div class="bg-white rounded-2xl px-5 py-4 shadow-sm">
+        <BaseCard class="px-5 py-4">
           <div class="flex items-center gap-4 flex-wrap">
             <!-- Icon + name -->
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                   style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold bg-sys-blueDim text-sys-blue flex-shrink-0">
                 {{ selCode.slice(-2) }}
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-lg font-bold text-gray-800">{{ etfName }}</h3>
-                  <span class="text-sm font-mono text-gray-400">{{ selCode }}</span>
+                  <h3 class="text-lg font-bold text-label-1">{{ etfName }}</h3>
+                  <span class="text-sm font-mono text-label-2">{{ selCode }}</span>
                   <!-- Tag badges -->
-                  <span v-if="holdSet.has(selCode)"
-                        class="text-xs px-1.5 py-0.5 rounded-md font-semibold"
-                        style="background:#eff6ff;color:#1e3a8a">持仓</span>
-                  <span v-if="signalSet.has(selCode)"
-                        class="text-xs px-1.5 py-0.5 rounded-md font-semibold"
-                        style="background:#f0fdf4;color:#065f46">今日推荐</span>
+                  <Badge v-if="holdSet.has(selCode)" tone="blue" label="持仓" />
+                  <Badge v-if="signalSet.has(selCode)" tone="green" label="今日推荐" />
                 </div>
                 <div class="flex items-center gap-3 mt-0.5">
-                  <span class="text-2xl font-bold text-gray-800">¥{{ latest?.close.toFixed(3) }}</span>
-                  <span class="text-sm font-semibold px-2 py-0.5 rounded-lg"
-                        :style="latestChg >= 0
-                          ? 'background:#f0fdf4;color:#059669'
-                          : 'background:#fff1f2;color:#ef4444'">
-                    {{ latestChg >= 0 ? '▲' : '▼' }} {{ Math.abs(latestChg).toFixed(2) }}%
-                  </span>
-                  <span class="text-xs text-gray-400">{{ latest?.date }}</span>
+                  <span class="text-2xl font-bold text-label-1">¥{{ latest?.close.toFixed(3) }}</span>
+                  <Badge :tone="latestChg >= 0 ? 'green' : 'red'"
+                         :label="(latestChg >= 0 ? '▲ ' : '▼ ') + Math.abs(latestChg).toFixed(2) + '%'" />
+                  <span class="text-xs text-label-2">{{ latest?.date }}</span>
                 </div>
               </div>
             </div>
@@ -195,106 +168,103 @@
             <!-- Stats -->
             <div class="flex gap-5 ml-auto text-sm flex-wrap">
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">区间最高</div>
-                <div class="font-bold" style="color:#ef4444">¥{{ hiPrice }}</div>
+                <div class="text-xs text-label-2 mb-0.5">区间最高</div>
+                <div class="font-bold text-sys-red">¥{{ hiPrice }}</div>
               </div>
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">区间最低</div>
-                <div class="font-bold" style="color:#059669">¥{{ loPrice }}</div>
+                <div class="text-xs text-label-2 mb-0.5">区间最低</div>
+                <div class="font-bold text-sys-green">¥{{ loPrice }}</div>
               </div>
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">区间涨跌</div>
-                <div class="font-bold" :style="rangeChg >= 0 ? 'color:#059669' : 'color:#ef4444'">
+                <div class="text-xs text-label-2 mb-0.5">区间涨跌</div>
+                <div class="font-bold" :class="rangeChg >= 0 ? 'text-sys-green' : 'text-sys-red'">
                   {{ rangeChg >= 0 ? '+' : '' }}{{ rangeChg.toFixed(2) }}%
                 </div>
               </div>
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">MA20</div>
-                <div class="font-bold text-gray-700">{{ ma20Latest }}</div>
+                <div class="text-xs text-label-2 mb-0.5">MA20</div>
+                <div class="font-bold text-label-1">{{ ma20Latest }}</div>
               </div>
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">RSI(14)</div>
+                <div class="text-xs text-label-2 mb-0.5">RSI(14)</div>
                 <div class="font-bold"
-                     :style="rsi14Latest > 70 ? 'color:#ef4444' : rsi14Latest < 30 ? 'color:#059669' : 'color:#374151'">
+                     :class="rsi14Latest > 70 ? 'text-sys-red' : rsi14Latest < 30 ? 'text-sys-green' : 'text-label-1'">
                   {{ rsi14Latest }}
                 </div>
               </div>
               <div class="text-center">
-                <div class="text-xs text-gray-400 mb-0.5">年化波动</div>
-                <div class="font-bold text-gray-700">{{ annualVol }}%</div>
+                <div class="text-xs text-label-2 mb-0.5">年化波动</div>
+                <div class="font-bold text-label-1">{{ annualVol }}%</div>
               </div>
             </div>
 
             <!-- Star (watchlist) toggle -->
-            <button class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all"
-                    :style="watchSet.has(selCode)
-                      ? 'background:#fef3c7;color:#f59e0b'
-                      : 'background:#f1f5f9;color:#94a3b8'"
+            <button class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all"
+                    :class="watchSet.has(selCode) ? 'bg-sys-orangeDim text-sys-orange' : 'bg-surface-2 text-label-2'"
                     :title="watchSet.has(selCode) ? '取消自选' : '加入自选'"
                     @click="toggleWatch(selCode)">
-              {{ watchSet.has(selCode) ? '⭐' : '☆' }}
+              <Star :size="18" :fill="watchSet.has(selCode) ? 'currentColor' : 'none'" />
             </button>
           </div>
-        </div>
+        </BaseCard>
 
         <!-- ── Controls ── -->
-        <div class="bg-white rounded-2xl px-5 py-3 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <BaseCard class="px-5 py-3 flex items-center justify-between flex-wrap gap-3">
           <div class="flex gap-1">
             <button v-for="p in PERIODS" :key="p.key"
                     class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-                    :style="period === p.key
-                      ? 'background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:white;box-shadow:0 2px 8px rgba(59,130,246,0.3)'
-                      : 'color:#64748b;background:#f1f5f9'"
+                    :class="period === p.key ? 'bg-sys-blue text-white' : 'bg-surface-2 text-label-2'"
                     @click="setPeriod(p.key)">
               {{ p.label }}
             </button>
           </div>
           <div class="flex gap-2 flex-wrap">
             <button v-for="ind in INDICATORS" :key="ind.key"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
                     :style="indOn[ind.key]
-                      ? `background:${ind.color}18;color:${ind.color};border:1.5px solid ${ind.color}55`
-                      : 'background:#f1f5f9;color:#94a3b8;border:1.5px solid #e2e8f0'"
+                      ? `background:${ind.color}18;color:${ind.color};border-color:${ind.color}55`
+                      : ''"
+                    :class="!indOn[ind.key] ? 'bg-surface-2 text-label-2 border-transparent' : ''"
                     @click="toggleInd(ind.key)">
               {{ ind.label }}
             </button>
           </div>
-        </div>
+        </BaseCard>
 
         <!-- ── Main price chart ── -->
-        <div class="bg-white rounded-2xl shadow-sm p-4">
-          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">价格走势</div>
+        <BaseCard class="p-4">
+          <div class="text-xs font-semibold text-label-2 uppercase tracking-wide mb-2">价格走势</div>
           <div style="height:340px;position:relative">
             <canvas ref="mainCanvas" style="width:100%;height:100%" />
           </div>
-        </div>
+        </BaseCard>
 
         <!-- ── Volume chart ── -->
-        <div class="bg-white rounded-2xl shadow-sm p-4">
-          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">成交量</div>
+        <BaseCard class="p-4">
+          <div class="text-xs font-semibold text-label-2 uppercase tracking-wide mb-2">成交量</div>
           <div style="height:100px;position:relative">
             <canvas ref="volCanvas" style="width:100%;height:100%" />
           </div>
-        </div>
+        </BaseCard>
 
         <!-- ── RSI chart ── -->
-        <div v-if="indOn.rsi" class="bg-white rounded-2xl shadow-sm p-4">
+        <BaseCard v-if="indOn.rsi" class="p-4">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">RSI (14)</span>
+            <span class="text-xs font-semibold text-label-2 uppercase tracking-wide">RSI (14)</span>
             <div class="flex gap-4 text-xs">
-              <span style="color:#ef4444">── 超买 70</span>
-              <span style="color:#059669">── 超卖 30</span>
+              <span class="text-sys-red">── 超买 70</span>
+              <span class="text-sys-green">── 超卖 30</span>
             </div>
           </div>
           <div style="height:100px;position:relative">
             <canvas ref="rsiCanvas" style="width:100%;height:100%" />
           </div>
-        </div>
+        </BaseCard>
 
         <!-- ── Legend + guide toggle ── -->
-        <div class="bg-white rounded-2xl shadow-sm px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500">
+        <BaseCard class="px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-label-2">
           <div class="flex items-center gap-1.5">
-            <div class="w-5 h-0.5 rounded" style="background:#3b82f6"></div><span>收盘价</span>
+            <div class="w-5 h-0.5 rounded bg-sys-blue"></div><span>收盘价</span>
           </div>
           <template v-if="indOn.ma">
             <div class="flex items-center gap-1.5">
@@ -315,10 +285,10 @@
             <span>趋势线</span>
           </div>
           <div v-if="hasBuyMarkers" class="flex items-center gap-1.5">
-            <span style="color:#059669;font-size:10px">▲</span><span>您的买入点</span>
+            <span class="text-sys-green" style="font-size:10px">▲</span><span>您的买入点</span>
           </div>
           <div v-if="hasSellMarkers" class="flex items-center gap-1.5">
-            <span style="color:#ef4444;font-size:10px">▼</span><span>您的卖出点</span>
+            <span class="text-sys-red" style="font-size:10px">▼</span><span>您的卖出点</span>
           </div>
           <div v-if="modelSignalSet.size" class="flex items-center gap-1.5">
             <div class="w-3 h-3 rounded-full" style="background:#f59e0b;opacity:0.8"></div>
@@ -326,106 +296,107 @@
           </div>
           <!-- Guide toggle -->
           <button class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  :style="showGuide
-                    ? 'background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe'
-                    : 'background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0'"
+                  :class="showGuide ? 'bg-sys-blueDim text-sys-blue' : 'bg-surface-2 text-label-2'"
                   @click="showGuide = !showGuide">
-            <span>📖</span>
+            <BookOpen :size="13" />
             <span>{{ showGuide ? '收起说明' : '指标说明' }}</span>
           </button>
-        </div>
+        </BaseCard>
 
         <!-- ── Indicator guide panel ── -->
-        <div v-if="showGuide" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <BaseCard v-if="showGuide" class="overflow-hidden">
           <!-- Header -->
-          <div class="px-6 py-4" style="background:linear-gradient(135deg,#0f172a,#1e3a8a)">
-            <h3 class="text-white font-bold text-base">📖 图表指标说明</h3>
-            <p class="text-blue-300 text-xs mt-1">了解每个指标的含义，帮助你更好地判断行情走势</p>
+          <div class="px-6 py-4 border-b border-hairline flex items-center gap-2">
+            <BookOpen :size="18" class="text-label-2" />
+            <div>
+              <h3 class="text-label-1 font-bold text-base">图表指标说明</h3>
+              <p class="text-label-2 text-xs mt-0.5">了解每个指标的含义，帮助你更好地判断行情走势</p>
+            </div>
           </div>
 
           <div class="p-5 grid grid-cols-2 gap-4">
 
             <!-- MA均线 -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-2 mb-2">
                 <div class="flex gap-1">
                   <div class="w-3 h-3 rounded-full" style="background:#f59e0b"></div>
                   <div class="w-3 h-3 rounded-full" style="background:#f43f5e"></div>
                   <div class="w-3 h-3 rounded-full" style="background:#8b5cf6"></div>
                 </div>
-                <span class="font-bold text-gray-800 text-sm">移动均线 MA5 / MA20 / MA60</span>
+                <span class="font-bold text-label-1 text-sm">移动均线 MA5 / MA20 / MA60</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-2">
+              <p class="text-xs text-label-2 leading-relaxed mb-2">
                 均线是过去 N 个交易日收盘价的平均值，代表市场的"平均持仓成本"。MA5 反映近一周趋势，MA20 反映近一个月，MA60 反映近三个月的中期走向。
               </p>
               <div class="space-y-1 text-xs">
-                <div class="flex gap-2"><span class="text-green-600 font-semibold flex-shrink-0">利多 ▶</span><span class="text-gray-600">价格在均线上方运行，说明持仓者整体盈利，趋势偏强</span></div>
-                <div class="flex gap-2"><span class="text-red-500 font-semibold flex-shrink-0">利空 ▶</span><span class="text-gray-600">价格跌破均线，特别是跌破 MA60，往往是趋势走弱的信号</span></div>
-                <div class="flex gap-2"><span class="text-blue-600 font-semibold flex-shrink-0">金叉 ▶</span><span class="text-gray-600">短期均线从下方穿越长期均线向上，是经典买入参考</span></div>
-                <div class="flex gap-2"><span class="text-gray-500 font-semibold flex-shrink-0">死叉 ▶</span><span class="text-gray-600">短期均线从上方跌破长期均线，是卖出或减仓的参考</span></div>
+                <div class="flex gap-2"><span class="text-sys-green font-semibold flex-shrink-0">利多 ▶</span><span class="text-label-2">价格在均线上方运行，说明持仓者整体盈利，趋势偏强</span></div>
+                <div class="flex gap-2"><span class="text-sys-red font-semibold flex-shrink-0">利空 ▶</span><span class="text-label-2">价格跌破均线，特别是跌破 MA60，往往是趋势走弱的信号</span></div>
+                <div class="flex gap-2"><span class="text-sys-blue font-semibold flex-shrink-0">金叉 ▶</span><span class="text-label-2">短期均线从下方穿越长期均线向上，是经典买入参考</span></div>
+                <div class="flex gap-2"><span class="text-label-2 font-semibold flex-shrink-0">死叉 ▶</span><span class="text-label-2">短期均线从上方跌破长期均线，是卖出或减仓的参考</span></div>
               </div>
             </div>
 
             <!-- 布林带 -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-5 h-4 rounded opacity-50" style="background:#94a3b8"></div>
-                <span class="font-bold text-gray-800 text-sm">布林带 Bollinger Bands (20, 2)</span>
+                <span class="font-bold text-label-1 text-sm">布林带 Bollinger Bands (20, 2)</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-2">
+              <p class="text-xs text-label-2 leading-relaxed mb-2">
                 布林带由三条线组成：中轨是 20 日均线，上下轨是在中轨基础上各加减 2 倍标准差。它构成了价格在统计意义上的"合理波动通道"，约 95% 的时间价格会在带内运行。
               </p>
               <div class="space-y-1 text-xs">
-                <div class="flex gap-2"><span class="text-green-600 font-semibold flex-shrink-0">下轨附近 ▶</span><span class="text-gray-600">价格处于历史相对低位，超跌反弹概率较高，可关注做多机会</span></div>
-                <div class="flex gap-2"><span class="text-red-500 font-semibold flex-shrink-0">上轨附近 ▶</span><span class="text-gray-600">价格处于历史相对高位，注意追高风险，可能出现回调</span></div>
-                <div class="flex gap-2"><span class="text-amber-600 font-semibold flex-shrink-0">带宽收窄 ▶</span><span class="text-gray-600">价格长期盘整，波动率低，往往预示即将发生方向性突破</span></div>
+                <div class="flex gap-2"><span class="text-sys-green font-semibold flex-shrink-0">下轨附近 ▶</span><span class="text-label-2">价格处于历史相对低位，超跌反弹概率较高，可关注做多机会</span></div>
+                <div class="flex gap-2"><span class="text-sys-red font-semibold flex-shrink-0">上轨附近 ▶</span><span class="text-label-2">价格处于历史相对高位，注意追高风险，可能出现回调</span></div>
+                <div class="flex gap-2"><span class="text-sys-orange font-semibold flex-shrink-0">带宽收窄 ▶</span><span class="text-label-2">价格长期盘整，波动率低，往往预示即将发生方向性突破</span></div>
               </div>
             </div>
 
             <!-- 趋势线 -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-2 mb-2">
                 <svg width="20" height="12"><line x1="0" y1="6" x2="20" y2="6" stroke="#0e7490" stroke-width="2" stroke-dasharray="5,3"/></svg>
-                <span class="font-bold text-gray-800 text-sm">线性回归趋势线</span>
+                <span class="font-bold text-label-1 text-sm">线性回归趋势线</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-2">
+              <p class="text-xs text-label-2 leading-relaxed mb-2">
                 用所选时间段内所有收盘价做线性回归，得到一条最能代表整体价格方向的直线。它过滤了日常噪音，直接显示"大方向"。
               </p>
               <div class="space-y-1 text-xs">
-                <div class="flex gap-2"><span class="text-green-600 font-semibold flex-shrink-0">向上倾斜 ▶</span><span class="text-gray-600">所选周期内整体处于上升趋势</span></div>
-                <div class="flex gap-2"><span class="text-red-500 font-semibold flex-shrink-0">向下倾斜 ▶</span><span class="text-gray-600">所选周期内整体处于下降趋势，谨慎操作</span></div>
-                <div class="flex gap-2"><span class="text-amber-600 font-semibold flex-shrink-0">价格偏离 ▶</span><span class="text-gray-600">价格大幅偏离趋势线时，往往会向趋势线方向回归（均值回归）</span></div>
-                <div class="flex gap-2"><span class="text-blue-600 font-semibold flex-shrink-0">注意 ▶</span><span class="text-gray-600">切换时间段后趋势线会重新计算，短周期和长周期得出的方向可能不同</span></div>
+                <div class="flex gap-2"><span class="text-sys-green font-semibold flex-shrink-0">向上倾斜 ▶</span><span class="text-label-2">所选周期内整体处于上升趋势</span></div>
+                <div class="flex gap-2"><span class="text-sys-red font-semibold flex-shrink-0">向下倾斜 ▶</span><span class="text-label-2">所选周期内整体处于下降趋势，谨慎操作</span></div>
+                <div class="flex gap-2"><span class="text-sys-orange font-semibold flex-shrink-0">价格偏离 ▶</span><span class="text-label-2">价格大幅偏离趋势线时，往往会向趋势线方向回归（均值回归）</span></div>
+                <div class="flex gap-2"><span class="text-sys-blue font-semibold flex-shrink-0">注意 ▶</span><span class="text-label-2">切换时间段后趋势线会重新计算，短周期和长周期得出的方向可能不同</span></div>
               </div>
             </div>
 
             <!-- RSI -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-4 h-4 rounded-full" style="background:#7c3aed"></div>
-                <span class="font-bold text-gray-800 text-sm">相对强弱指数 RSI (14)</span>
+                <span class="font-bold text-label-1 text-sm">相对强弱指数 RSI (14)</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-2">
+              <p class="text-xs text-label-2 leading-relaxed mb-2">
                 RSI 衡量过去 14 个交易日内"涨的力量"和"跌的力量"的对比，数值在 0 到 100 之间。它回答的问题是：这只 ETF 最近涨/跌得是否过于极端？
               </p>
               <div class="space-y-1 text-xs">
                 <div class="flex gap-2">
-                  <span class="font-bold flex-shrink-0" style="color:#ef4444">RSI &gt; 70 ▶</span>
-                  <span class="text-gray-600">超买区，短期涨幅过猛，注意可能出现调整，不宜追高</span>
+                  <span class="font-bold flex-shrink-0 text-sys-red">RSI &gt; 70 ▶</span>
+                  <span class="text-label-2">超买区，短期涨幅过猛，注意可能出现调整，不宜追高</span>
                 </div>
                 <div class="flex gap-2">
-                  <span class="font-bold flex-shrink-0" style="color:#059669">RSI &lt; 30 ▶</span>
-                  <span class="text-gray-600">超卖区，短期跌幅过大，往往出现技术性反弹，可关注做多机会</span>
+                  <span class="font-bold flex-shrink-0 text-sys-green">RSI &lt; 30 ▶</span>
+                  <span class="text-label-2">超卖区，短期跌幅过大，往往出现技术性反弹，可关注做多机会</span>
                 </div>
                 <div class="flex gap-2">
-                  <span class="text-gray-500 font-semibold flex-shrink-0">RSI 40–60 ▶</span>
-                  <span class="text-gray-600">多空相对平衡，趋势不明显，观望为主</span>
+                  <span class="text-label-2 font-semibold flex-shrink-0">RSI 40–60 ▶</span>
+                  <span class="text-label-2">多空相对平衡，趋势不明显，观望为主</span>
                 </div>
               </div>
             </div>
 
             <!-- 成交量 -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-2 mb-2">
                 <div class="flex gap-0.5 items-end h-4">
                   <div class="w-2 rounded-sm" style="height:60%;background:rgba(59,130,246,0.6)"></div>
@@ -433,39 +404,39 @@
                   <div class="w-2 rounded-sm" style="height:40%;background:rgba(239,68,68,0.6)"></div>
                   <div class="w-2 rounded-sm" style="height:80%;background:rgba(59,130,246,0.6)"></div>
                 </div>
-                <span class="font-bold text-gray-800 text-sm">成交量（蓝涨 / 红跌）</span>
+                <span class="font-bold text-label-1 text-sm">成交量（蓝涨 / 红跌）</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-2">
+              <p class="text-xs text-label-2 leading-relaxed mb-2">
                 成交量代表当天实际买卖了多少份额，是"市场参与度"的直接体现。蓝色柱为当日收涨，红色柱为收跌。
               </p>
               <div class="space-y-1 text-xs">
-                <div class="flex gap-2"><span class="text-green-600 font-semibold flex-shrink-0">量价齐升 ▶</span><span class="text-gray-600">价格上涨同时成交量放大，资金积极跟进，是最健康的上涨形态</span></div>
-                <div class="flex gap-2"><span class="text-amber-600 font-semibold flex-shrink-0">价涨量缩 ▶</span><span class="text-gray-600">价格上涨但成交量萎缩，上涨动力不足，小心无量虚涨</span></div>
-                <div class="flex gap-2"><span class="text-red-500 font-semibold flex-shrink-0">价跌量增 ▶</span><span class="text-gray-600">价格下跌同时成交量放大，说明抛压较重，卖盘积极</span></div>
-                <div class="flex gap-2"><span class="text-gray-500 font-semibold flex-shrink-0">地量 ▶</span><span class="text-gray-600">成交量极度萎缩，市场高度观望，往往是阶段性底部或变盘前的信号</span></div>
+                <div class="flex gap-2"><span class="text-sys-green font-semibold flex-shrink-0">量价齐升 ▶</span><span class="text-label-2">价格上涨同时成交量放大，资金积极跟进，是最健康的上涨形态</span></div>
+                <div class="flex gap-2"><span class="text-sys-orange font-semibold flex-shrink-0">价涨量缩 ▶</span><span class="text-label-2">价格上涨但成交量萎缩，上涨动力不足，小心无量虚涨</span></div>
+                <div class="flex gap-2"><span class="text-sys-red font-semibold flex-shrink-0">价跌量增 ▶</span><span class="text-label-2">价格下跌同时成交量放大，说明抛压较重，卖盘积极</span></div>
+                <div class="flex gap-2"><span class="text-label-2 font-semibold flex-shrink-0">地量 ▶</span><span class="text-label-2">成交量极度萎缩，市场高度观望，往往是阶段性底部或变盘前的信号</span></div>
               </div>
             </div>
 
             <!-- 个人标记 + 模型信号 -->
-            <div class="rounded-xl p-4" style="background:#fafbff;border:1px solid #f1f5f9">
+            <div class="rounded-xl p-4 bg-surface-2">
               <div class="flex items-center gap-3 mb-2">
-                <span class="font-bold text-gray-800 text-sm">个人标记 &amp; 模型信号</span>
+                <span class="font-bold text-label-1 text-sm">个人标记 &amp; 模型信号</span>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mb-3">
+              <p class="text-xs text-label-2 leading-relaxed mb-3">
                 图表上叠加了你的历史操作记录和模型的历史信号，方便你复盘过往决策的效果。
               </p>
               <div class="space-y-2 text-xs">
                 <div class="flex gap-2 items-start">
-                  <span class="flex-shrink-0 font-bold mt-0.5" style="color:#059669">▲ 买入点</span>
-                  <span class="text-gray-600">绿色三角显示在您记录的买入日期对应的价格下方。可以对照均线和布林带，判断当时的买入时机是否合理。</span>
+                  <span class="flex-shrink-0 font-bold mt-0.5 text-sys-green">▲ 买入点</span>
+                  <span class="text-label-2">绿色三角显示在您记录的买入日期对应的价格下方。可以对照均线和布林带，判断当时的买入时机是否合理。</span>
                 </div>
                 <div class="flex gap-2 items-start">
-                  <span class="flex-shrink-0 font-bold mt-0.5" style="color:#ef4444">▼ 卖出点</span>
-                  <span class="text-gray-600">红色三角显示在您记录的卖出日期对应的价格上方，方便评估卖出时机与市场走势的关系。</span>
+                  <span class="flex-shrink-0 font-bold mt-0.5 text-sys-red">▼ 卖出点</span>
+                  <span class="text-label-2">红色三角显示在您记录的卖出日期对应的价格上方，方便评估卖出时机与市场走势的关系。</span>
                 </div>
                 <div class="flex gap-2 items-start">
-                  <span class="flex-shrink-0 flex items-center gap-1 mt-0.5"><div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#f59e0b"></div><span class="font-bold" style="color:#d97706">模型信号</span></span>
-                  <span class="text-gray-600">橙色圆点标记模型历史上对该ETF发出做多信号的日期，可以结合后续走势评估模型准确率。</span>
+                  <span class="flex-shrink-0 flex items-center gap-1 mt-0.5"><div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#f59e0b"></div><span class="font-bold text-sys-orange">模型信号</span></span>
+                  <span class="text-label-2">橙色圆点标记模型历史上对该ETF发出做多信号的日期，可以结合后续走势评估模型准确率。</span>
                 </div>
               </div>
             </div>
@@ -473,12 +444,12 @@
           </div>
 
           <!-- Footer tip -->
-          <div class="mx-5 mb-5 px-4 py-3 rounded-xl text-xs leading-relaxed"
-               style="background:#fffbeb;border:1px solid #fde68a;color:#92400e">
-            <strong>💡 实战小提示：</strong>
-            单一指标容易出现误判，建议将多个指标结合使用。例如：RSI 进入超卖区 + 价格触碰布林带下轨 + 成交量放量，三者共振时做多胜率往往更高。模型信号也是基于多指标综合判断的结果。
+          <div class="mx-5 mb-5 px-4 py-3 rounded-xl text-xs leading-relaxed bg-sys-orangeDim text-sys-orange flex items-start gap-2">
+            <Lightbulb :size="14" class="mt-0.5 flex-shrink-0" />
+            <span><strong>实战小提示：</strong>
+            单一指标容易出现误判，建议将多个指标结合使用。例如：RSI 进入超卖区 + 价格触碰布林带下轨 + 成交量放量，三者共振时做多胜率往往更高。模型信号也是基于多指标综合判断的结果。</span>
           </div>
-        </div>
+        </BaseCard>
 
       </template>
     </div>
@@ -490,6 +461,11 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import Chart from 'chart.js/auto'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import BaseCard from '../components/base/BaseCard.vue'
+import Badge    from '../components/base/Badge.vue'
+import {
+  Star, Wallet, Radar, ChevronDown, ChevronRight, LineChart, Loader2, BookOpen, Lightbulb,
+} from '@lucide/vue'
 
 // ── Constants ───────────────────────────────────────────────────
 const PERIODS = [
@@ -889,8 +865,8 @@ function drawMain() {
         },
       },
       scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 11 }, color: '#94a3b8' }, grid: { color: 'rgba(226,232,240,0.4)' } },
-        y: { ticks: { font: { size: 11 }, color: '#94a3b8', callback: v => '¥' + v.toFixed(2) }, grid: { color: 'rgba(226,232,240,0.4)' } },
+        x: { ticks: { maxTicksLimit: 8, font: { size: 11 }, color: '#94a3b8' }, grid: { color: 'rgba(226,232,240,0.15)' } },
+        y: { ticks: { font: { size: 11 }, color: '#94a3b8', callback: v => '¥' + v.toFixed(2) }, grid: { color: 'rgba(226,232,240,0.15)' } },
       },
     },
   })
@@ -931,7 +907,7 @@ function drawVol() {
         x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#94a3b8' }, grid: { display: false } },
         y: {
           ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 4, callback: v => v >= 1e8 ? (v / 1e8).toFixed(1) + '亿' : (v / 1e4).toFixed(0) + '万' },
-          grid: { color: 'rgba(226,232,240,0.4)' },
+          grid: { color: 'rgba(226,232,240,0.15)' },
         },
       },
     },
@@ -968,7 +944,7 @@ function drawRsi() {
       },
       scales: {
         x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#94a3b8' }, grid: { display: false } },
-        y: { min: 0, max: 100, ticks: { maxTicksLimit: 5, font: { size: 10 }, color: '#94a3b8' }, grid: { color: 'rgba(226,232,240,0.4)' } },
+        y: { min: 0, max: 100, ticks: { maxTicksLimit: 5, font: { size: 10 }, color: '#94a3b8' }, grid: { color: 'rgba(226,232,240,0.15)' } },
       },
     },
   })

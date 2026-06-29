@@ -1,7 +1,7 @@
 # ETF 量化管理平台 · 项目说明（供 Claude 读取）
 
 > 本文件供 AI 助手快速了解项目现状，请在每次重大改动后同步更新。
-> 最后更新：2026-06-24（B1 持仓实时价/浮盈 + B1a 卖出信号角标 + B1b 快速加仓/减持）
+> 最后更新：2026-06-28（前端 Apple 风格视觉重构 F1-F9 完成；构建产物移出 git，改为多人协作分支流程）
 
 ---
 
@@ -20,8 +20,22 @@ cd /workspace/suiy/etf
 python web_app.py                      # 后台：nohup python web_app.py > app.log 2>&1 &
 ```
 
-**部署流程**：本地开发 → `git push`（Windows PowerShell）→ 服务器 `git pull` → 重启 Flask。
+**部署流程**：本地开发 → `git push`（Windows PowerShell）→ 服务器 `git pull` → `cd frontend && npm run build` → 重启 Flask。
 服务器访问 GitHub 网络不稳定，统一从 Windows 本地 push。
+
+> `static/dist/` 构建产物已从 2026-06-28 起移出 git 追踪（见 .gitignore），避免多人协作时本地构建文件名 hash 不同导致频繁冲突。
+> 服务器需要安装 Node.js，pull 后必须执行一次 `npm run build` 才能生效，不能再直接重启跳过这一步。
+
+**多人协作（2026-06-28 起）**：项目现在由 2 人协作开发。改用 feature 分支流程，不再直接在 `main` 上开发：
+```bash
+git checkout -b feature/xxx     # 开始一项新工作前先开分支
+# ... 开发、提交 ...
+git checkout main && git pull   # 合并前先同步 main 最新代码
+git merge feature/xxx           # 本地解决冲突（如有）
+git push
+git branch -d feature/xxx       # 合并后删除分支
+```
+开工前先在群里说一下要改哪些文件/模块，尽量避免两人同时改同一批文件。
 
 ---
 
@@ -71,7 +85,7 @@ D:\AI_PROJECT\
 │   ├── models/
 │   │   ├── trainer.py                  # 模型训练（E4b：保存带日期版本，更新 active_models）
 │   │   ├── tuner.py                    # Optuna 超参调优
-│   │   └── saved/                      # 训练好的模型文件，如 lgbm_forward5_20260624.pkl（已 gitignore）
+│   │   └── saved/                      # 训练好的模型文件，如 lgbm_forward5_20260626.pkl（已 gitignore）
 │   ├── signals/
 │   │   ├── generator.py                # 买入信号生成器
 │   │   ├── sell_generator.py           # 卖出信号生成器（v1.5）
@@ -98,7 +112,7 @@ D:\AI_PROJECT\
 │   ├── users.json                      # 用户账号（含密码 hash）
 │   └── {user_id}.json                  # 各用户持仓 + 交易记录
 │
-├── static/dist/                        # 前端构建产物（Vite 输出，入库）
+├── static/dist/                        # 前端构建产物（Vite 输出，已 gitignore，需本地/服务器各自 npm run build）
 │   ├── index.html
 │   └── assets/
 │
@@ -146,7 +160,7 @@ npm run build               # 正常构建（输出至 ../static/dist/）
 npx vite build --emptyOutDir false  # 服务器文件被锁时用此命令
 ```
 
-**注意**：`static/dist/` 已入库，服务器 pull 后无需重新构建。
+**注意**：`static/dist/` 已从 git 移除追踪（2026-06-28），本地和服务器 pull 代码后都要各自执行一次 `npm run build` 才能看到最新前端效果。
 
 ---
 
@@ -193,7 +207,7 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
   "take_profit": 0.08,          // 止盈线（浮盈 8% 触发卖出建议）
   "sell_prob_threshold": 0.55,  // 模型看空阈值（prob_down > 55% 触发）
   "active_models": {            // 当前激活模型版本（E4b，trainer.py 训练后自动写入）
-    "5": "lgbm_forward5_20260624.pkl"
+    "5": "lgbm_forward5_20260626.pkl"
   }
 }
 ```
@@ -279,7 +293,7 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
 
 ## 十一、当前版本与待办
 
-**当前版本**：v1.7（2026-06-24）
+**当前版本**：v1.8（2026-06-26）
 
 **近期待办**（详见 TODO.md）：
 - [ ] **B3**：已实现盈亏追踪（卖出实现盈亏、累计汇总卡片）
@@ -301,6 +315,7 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
 - **B1a** 卖出信号角标：PortfolioView 切换账户时并发拉 `/api/sell-signals`，ETF 名旁显示「止损/止盈/看空」badge（2026-06-24）
 - **B1b** 快速加仓/减持：操作列 +加仓/-减持 按钮，行内气泡表单（股数+价格+预览扣款/到账+现金变化），回车确认；底层调 `POST /api/transactions`（2026-06-24）
 - **B2** 交易→持仓联动：后端 `api_create_transaction` 已完整实现（持仓股数/均价/现金三联动），B1b 提供前端快捷入口（2026-06-24）
+- **C4** ETF 票池代码↔名称全量纠错：核查全部 61 只代码，修复 11 处错配——环保→稀土（516780）、北证50/白银实为黄金（159834/159812）、地产实为科技龙头（515000）、军工实为基建（516970）、央企改革实为央企创新（515600）、159806↔159869（网络安全/新能源车 实为 新能源车/动漫游戏，已对调）；石油/碳中和/储能 3 只原代码与主题完全不符，改用真实代码 561360/159790/159566（补拉历史数据），重训激活模型 `lgbm_forward5_20260626.pkl`（数据集 39,613 行）（2026-06-26）
 
 ---
 

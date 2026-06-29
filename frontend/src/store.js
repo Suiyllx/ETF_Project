@@ -1,18 +1,40 @@
 import { reactive } from 'vue'
 import { api } from './api.js'
 
+const THEME_KEY = 'etf-theme'   // localStorage: 'dark' | 'light'
+
+function readStoredTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY)
+    if (v === 'light' || v === 'dark') return v
+  } catch {}
+  return 'dark'   // 默认深色
+}
+
+function applyTheme(theme) {
+  document.documentElement.classList.toggle('light', theme === 'light')
+}
+
 export const store = reactive({
   users:          [],
   etfList:        {},   // code → name
   etfCategories:  {},   // code → category
   status:         '加载中…',
   currentUser:    null, // { id, name, role, email }
+  darkMode:       readStoredTheme() === 'dark',
 
   get isAdmin() {
     return this.currentUser?.role === 'admin'
   },
   get isLoggedIn() {
     return !!this.currentUser
+  },
+
+  toggleDarkMode() {
+    this.darkMode = !this.darkMode
+    const theme = this.darkMode ? 'dark' : 'light'
+    try { localStorage.setItem(THEME_KEY, theme) } catch {}
+    applyTheme(theme)
   },
 
   // Called once on app mount — checks session, then loads data
@@ -77,3 +99,6 @@ export const store = reactive({
     try { this.users = await api('GET', '/api/users') } catch {}
   },
 })
+
+// 模块加载时立即同步一次，避免 mount 前出现错误主题的闪屏
+applyTheme(store.darkMode ? 'dark' : 'light')
