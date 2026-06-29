@@ -142,7 +142,10 @@ def main():
 
     # ── 3. 生成卖出信号 ──────────────────────────────────────────────────────
     print("\nStep 3/5  生成卖出信号...")
-    _, stage_ok["sell_signals"] = run_with_retry(generate_sell_signals, "生成卖出信号")
+    sell_signals_by_user, stage_ok["sell_signals"] = run_with_retry(
+        generate_sell_signals, "生成卖出信号",
+    )
+    sell_signals_by_user = sell_signals_by_user or {}
 
     # ── 4. 加载用户列表 ──────────────────────────────────────────────────────
     print("\nStep 4/5  加载用户列表...")
@@ -176,6 +179,7 @@ def main():
                     forward=FORWARD_DAYS,
                     portfolio=portfolio,
                     email=u.email,
+                    sell_signals=sell_signals_by_user.get(u.id, []),
                 )
 
             _, ok = run_with_retry(

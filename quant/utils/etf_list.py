@@ -14,7 +14,6 @@ ETF_LIST = [
     {"code": "512100", "name": "中证1000ETF",        "category": "宽基"},
     {"code": "563300", "name": "中证2000ETF",        "category": "宽基"},
     {"code": "588000", "name": "科创50ETF",          "category": "宽基"},
-    {"code": "159834", "name": "北证50ETF",          "category": "宽基"},
 
     # ── 宽基指数（海外）─────────────────────────────────────────
     {"code": "513050", "name": "中概互联ETF",        "category": "海外"},
@@ -35,9 +34,9 @@ ETF_LIST = [
     {"code": "159992", "name": "创新药ETF",          "category": "医疗"},
 
     # ── 科技 ──────────────────────────────────────────────────
-    {"code": "159806", "name": "网络安全ETF",        "category": "科技"},
     {"code": "159995", "name": "芯片ETF",            "category": "科技"},
     {"code": "512480", "name": "半导体ETF",          "category": "科技"},
+    {"code": "515000", "name": "科技龙头ETF",        "category": "科技"},
     {"code": "515050", "name": "5G ETF",             "category": "科技"},
     {"code": "515070", "name": "AI ETF",             "category": "科技"},
     {"code": "516510", "name": "云计算ETF",          "category": "科技"},
@@ -45,15 +44,16 @@ ETF_LIST = [
 
     # ── 能源 ──────────────────────────────────────────────────
     {"code": "159611", "name": "电力ETF",            "category": "能源"},
-    {"code": "159628", "name": "石油ETF",            "category": "能源"},
-    {"code": "159869", "name": "新能源车ETF",        "category": "能源"},
-    {"code": "159931", "name": "碳中和ETF",          "category": "能源"},
+    {"code": "159806", "name": "新能源车ETF",        "category": "能源"},
+    {"code": "159790", "name": "碳中和ETF",          "category": "能源"},
+    {"code": "159566", "name": "储能ETF",            "category": "能源"},
     {"code": "515790", "name": "光伏ETF",            "category": "能源"},
     {"code": "516160", "name": "新能源ETF",          "category": "能源"},
-    {"code": "562900", "name": "储能ETF",            "category": "能源"},
+    {"code": "561360", "name": "石油ETF",            "category": "能源"},
 
     # ── 消费 ──────────────────────────────────────────────────
     {"code": "159766", "name": "旅游ETF",            "category": "消费"},
+    {"code": "159869", "name": "动漫游戏ETF",        "category": "消费"},
     {"code": "159928", "name": "消费ETF",            "category": "消费"},
     {"code": "159996", "name": "家电ETF",            "category": "消费"},
     {"code": "512690", "name": "酒ETF",              "category": "消费"},
@@ -64,15 +64,14 @@ ETF_LIST = [
     {"code": "159825", "name": "农业ETF",            "category": "周期"},
     {"code": "515210", "name": "钢铁ETF",            "category": "周期"},
     {"code": "515220", "name": "煤炭ETF",            "category": "周期"},
-    {"code": "515600", "name": "央企改革ETF",        "category": "周期"},
+    {"code": "515600", "name": "央企创新ETF",        "category": "周期"},
     {"code": "516020", "name": "化工ETF",            "category": "周期"},
-    {"code": "516780", "name": "环保ETF",            "category": "周期"},
+    {"code": "516780", "name": "稀土ETF",            "category": "周期"},
     {"code": "516950", "name": "基建ETF",            "category": "周期"},
-    {"code": "516970", "name": "军工ETF",            "category": "周期"},
+    {"code": "516970", "name": "基建工程ETF",        "category": "周期"},
 
     # ── 地产 ──────────────────────────────────────────────────
     {"code": "512200", "name": "房地产ETF",          "category": "地产"},
-    {"code": "515000", "name": "地产ETF",            "category": "地产"},
 
     # ── 债券 ──────────────────────────────────────────────────
     {"code": "511010", "name": "国债ETF",            "category": "债券"},
@@ -80,7 +79,8 @@ ETF_LIST = [
     {"code": "511380", "name": "可转债ETF",          "category": "债券"},
 
     # ── 商品 ──────────────────────────────────────────────────
-    {"code": "159812", "name": "白银ETF",            "category": "商品"},
+    {"code": "159812", "name": "黄金ETF(前海开源)",  "category": "商品"},
+    {"code": "159834", "name": "黄金ETF(上海金)",    "category": "商品"},
     {"code": "159980", "name": "有色金属ETF",        "category": "商品"},
     {"code": "159985", "name": "豆粕ETF",            "category": "商品"},
     {"code": "518880", "name": "黄金ETF",            "category": "商品"},

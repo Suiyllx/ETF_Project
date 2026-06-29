@@ -92,15 +92,21 @@ ADVICE_COLOR = {
     "SKIP":   "#6b7280",
 }
 
+TRIGGER_LABEL = {"STOP_LOSS": "止损", "TAKE_PROFIT": "止盈", "MODEL_SELL": "模型看空"}
+TRIGGER_COLOR = {"STOP_LOSS": "#ef4444", "TAKE_PROFIT": "#f97316", "MODEL_SELL": "#8b5cf6"}
+
 
 # ── 日报 HTML ─────────────────────────────────────────────────
 
-def _html_daily(signals, forward, portfolio=None, user_name=""):
+def _html_daily(signals, forward, portfolio=None, user_name="", sell_signals=None):
+    sell_signals = sell_signals or []
     today    = date.today().strftime("%Y-%m-%d")
     n        = len(signals)
+    n_sell   = len(sell_signals)
     greeting = ("你好 " + user_name + "，") if user_name else ""
     subject  = ("📊 ETF量化日报 " + today + " | "
-                + (str(n) + "个做多信号" if n else "无信号·观望"))
+                + (str(n) + "个做多信号" if n else "无信号·观望")
+                + (" | " + str(n_sell) + "个卖出提醒" if n_sell else ""))
 
     # 持仓概览
     portfolio_html = ""
@@ -207,6 +213,53 @@ def _html_daily(signals, forward, portfolio=None, user_name=""):
             "持有约 " + str(forward) + " 个交易日后观察止盈/止损。</p>"
         )
 
+    # 卖出信号
+    sell_html = ""
+    if sell_signals:
+        sell_rows = ""
+        for s in sell_signals:
+            trigger    = s.get("trigger", "MODEL_SELL")
+            label      = TRIGGER_LABEL.get(trigger, trigger)
+            color      = TRIGGER_COLOR.get(trigger, "#8b5cf6")
+            name       = s["name"]
+            code       = s["code"]
+            pnl_pct    = s.get("unrealized_pct") or 0.0
+            pnl_str    = ("+" if pnl_pct >= 0 else "") + "{:.1%}".format(pnl_pct)
+            pnl_color  = "#22c55e" if pnl_pct >= 0 else "#ef4444"
+            cur_price  = "{:.2f}".format(s.get("current_price") or 0.0)
+            reason     = s.get("trigger_reason", "")
+            sell_rows += (
+                "<tr style='border-bottom:1px solid #f3f4f6'>"
+                "<td style='padding:10px 8px'>"
+                "<span style='background:" + color + "22;color:" + color + ";"
+                "font-size:12px;font-weight:600;padding:2px 7px;border-radius:4px'>"
+                + label + "</span></td>"
+                "<td style='padding:10px 8px'>"
+                "<div style='font-weight:600;font-size:14px'>" + name + "</div>"
+                "<div style='color:#9ca3af;font-size:12px'>" + code + "</div></td>"
+                "<td style='padding:10px 8px;text-align:right'>"
+                "<div style='font-size:14px'>" + cur_price + "</div>"
+                "<div style='color:" + pnl_color + ";font-size:12px;font-weight:600'>"
+                + pnl_str + "</div></td>"
+                "<td style='padding:10px 8px;color:#6b7280;font-size:13px'>"
+                + reason + "</td></tr>"
+            )
+        sell_table = (
+            "<table width='100%' cellpadding='0' cellspacing='0'"
+            " style='border-collapse:collapse;font-size:13px'>"
+            "<tr style='background:#f9fafb;color:#6b7280;font-size:12px'>"
+            "<th style='padding:8px;text-align:left'>触发</th>"
+            "<th style='padding:8px;text-align:left'>标的</th>"
+            "<th style='padding:8px;text-align:right'>现价/浮盈亏</th>"
+            "<th style='padding:8px;text-align:left'>说明</th>"
+            "</tr>" + sell_rows + "</table>"
+        )
+        sell_html = (
+            "<div style='font-size:15px;font-weight:600;color:#111827;"
+            "margin:24px 0 12px'>🔴 卖出提醒（" + str(n_sell) + " 只）</div>"
+            + sell_table
+        )
+
     html = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -226,6 +279,7 @@ def _html_daily(signals, forward, portfolio=None, user_name=""):
         + "<div style='font-size:15px;font-weight:600;color:#111827;margin-bottom:12px'>"
         "🟢 做多信号（" + str(n) + " 只）</div>"
         + signals_html
+        + sell_html
         + "</div>"
         "<div style='background:#f9fafb;padding:14px 28px;"
         "font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6'>"
@@ -297,16 +351,17 @@ def _html_intraday(node_label, confirmed):
 
 # ── 对外接口 ──────────────────────────────────────────────────
 
-def push_daily_report(signals, forward=5, portfolio=None, email=None, subject_prefix=""):
+def push_daily_report(signals, forward=5, portfolio=None, email=None, subject_prefix="",
+                       sell_signals=None):
     """格式化日报并发送邮件。email: 收件人地址。subject_prefix: 主题前缀，如"【周一预报】"。"""
     user_name = getattr(getattr(portfolio, "user", None), "name", "")
-    subject, html = _html_daily(signals, forward, portfolio, user_name)
+    subject, html = _html_daily(signals, forward, portfolio, user_name, sell_signals)
     if subject_prefix:
         subject = subject_prefix + subject
 
     label = ("[" + user_name + "] ") if user_name else ""
     print("\n" + label + subject)
-    print("  信号数: " + str(len(signals)))
+    print("  信号数: " + str(len(signals)) + "  卖出提醒: " + str(len(sell_signals or [])))
 
     recipient = email
     if not recipient:

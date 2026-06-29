@@ -10,6 +10,6 @@
   "take_profit": 0.08,
   "sell_prob_threshold": 0.55,
   "active_models": {
-    "5": "lgbm_forward5_20260624.pkl"
+    "5": "lgbm_forward5_20260628.pkl"
   }
 }
