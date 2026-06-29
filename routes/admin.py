@@ -63,6 +63,11 @@ def api_put_model_config():
         if not (0.40 <= v <= 0.95):
             return jsonify({"error": "模型看空阈值需在 40% ~ 95% 之间"}), 400
         config["sell_prob_threshold"] = round(v, 3)
+    if "trend_filter_strong_prob" in data:
+        v = float(data["trend_filter_strong_prob"])
+        if not (0.50 <= v <= 0.90):
+            return jsonify({"error": "趋势过滤强度门槛需在 50% ~ 90% 之间"}), 400
+        config["trend_filter_strong_prob"] = round(v, 3)
     write_model_config(config)
     return jsonify(config)
 
@@ -210,3 +215,12 @@ def api_backtest():
             if results:
                 return jsonify(results)
     return jsonify([])
+
+
+@admin_bp.get("/api/signal-backtest")
+@require_admin
+def api_signal_backtest():
+    """对真实推送过的历史信号做事后回测：整体胜率/收益 + 按指标分组对比。"""
+    from quant.signals.backtest_history import compute_summary
+    min_samples = request.args.get("min_samples", default=20, type=int)
+    return jsonify(compute_summary(min_samples=min_samples))

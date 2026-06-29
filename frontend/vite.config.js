@@ -8,6 +8,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    port: Number(process.env.PORT) || 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8888',

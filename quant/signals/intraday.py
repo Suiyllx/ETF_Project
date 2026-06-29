@@ -45,6 +45,8 @@ def _broadcast(node_label: str, confirmed: list[dict]):
         return
 
     for user in users:
+        if not user.email:
+            continue
         push_intraday_report(node_label, confirmed, email=user.email)
 
 BEIJING = ZoneInfo("Asia/Shanghai")

@@ -36,6 +36,7 @@ _CONFIG_DEFAULTS: dict = {
     "take_profit":        0.08,
     "sell_prob_threshold": 0.55,
     "active_models":      {},   # { "5": "lgbm_forward5_20260624.pkl" }
+    "trend_filter_strong_prob": 0.60,  # 跌破MA20时，prob_up须超过此值才保留信号
 }
 
 

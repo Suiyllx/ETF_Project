@@ -37,6 +37,10 @@ PROB_THRESHOLD = 0.50
 # 默认黑名单（可通过 model_config.json 覆盖）
 _DEFAULT_BLACKLIST = ["159869", "159766", "159928"]   # 新能源车、旅游、消费
 
+# 趋势过滤：prob_up 低于此线又跌破 MA20 的信号直接剔除，避免推荐下降趋势中的标的
+# prob_up 达到此线说明模型信心足够强，仍保留信号（不一刀切，留给真正强势的逆势信号）
+TREND_FILTER_STRONG_PROB = 0.60
+
 # 候选池文件路径（与 web_app.py 保持一致：quant/signals/）
 SIGNALS_DIR = Path(__file__).parent
 SIGNALS_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,6 +56,7 @@ _CONFIG_DEFAULTS: dict = {
     "prob_threshold": PROB_THRESHOLD,
     "blacklist":      _DEFAULT_BLACKLIST,
     "threshold_overrides": {},
+    "trend_filter_strong_prob": TREND_FILTER_STRONG_PROB,
 }
 
 
@@ -125,6 +130,7 @@ def generate_signals(forward: int = FORWARD_DAYS,
     if prob_threshold is None:
         prob_threshold = float(cfg.get("prob_threshold", PROB_THRESHOLD))
     blacklist = set(cfg.get("blacklist", _DEFAULT_BLACKLIST))
+    trend_filter_strong_prob = float(cfg.get("trend_filter_strong_prob", TREND_FILTER_STRONG_PROB))
 
     bundle = load_model(forward)
     model        = bundle["model"]
@@ -155,6 +161,14 @@ def generate_signals(forward: int = FORWARD_DAYS,
 
             if signal == 1 and prob_up >= prob_threshold:
                 last = df.iloc[-1]
+
+                # 趋势过滤：跌破MA20且模型信心不够强（prob_up < trend_filter_strong_prob）时剔除，
+                # 避免推荐持续下降趋势中的标的（如曾出现的钢铁ETF/新能源车ETF连续下跌仍被推荐）
+                ma_dev_20 = last.get("ma_dev_20")
+                if (ma_dev_20 is not None and not pd.isna(ma_dev_20)
+                        and ma_dev_20 < 0 and prob_up < trend_filter_strong_prob):
+                    continue
+
                 # 提取关键技术指标，供前端展示解释
                 def _f(col, decimals=3):
                     v = last.get(col)

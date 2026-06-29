@@ -170,6 +170,9 @@ def main():
                     "reason": "load_users_failed"})
     else:
         for user in users:
+            if not user.email:
+                print(f"  ── 跳过用户：{user.name}（未设置邮箱）──")
+                continue
             print(f"  ── 处理用户：{user.name} ──")
 
             def _push(u=user):

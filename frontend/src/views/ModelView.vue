@@ -69,6 +69,29 @@
 
           <hr class="divider" />
 
+          <!-- Trend filter -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <div class="param-label">趋势过滤强度门槛</div>
+                <div class="param-desc">已跌破MA20的标的，做多概率须超过此值才保留（避免推荐持续下降趋势中的标的）</div>
+              </div>
+              <div class="big-value">
+                {{ (cfg.trend_filter_strong_prob * 100).toFixed(0) }}<span class="big-value-unit">%</span>
+              </div>
+            </div>
+            <input type="range" v-model.number="cfg.trend_filter_strong_prob"
+                   min="0.50" max="0.90" step="0.01"
+                   class="range-input w-full" />
+            <div class="flex justify-between text-xs mt-1 text-label-3">
+              <span>50% 几乎不过滤</span>
+              <span>默认 60%</span>
+              <span>90% 严格过滤</span>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
           <!-- Stop loss -->
           <div>
             <div class="flex items-center justify-between mb-2">
@@ -318,6 +341,7 @@ const cfg = reactive({
   threshold_overrides: {},
   stop_loss:   0.05,
   take_profit: 0.08,
+  trend_filter_strong_prob: 0.60,
 })
 const calibrated  = reactive({})
 const lookback    = ref(20)
@@ -426,6 +450,7 @@ async function saveAll() {
       threshold_overrides: cleanOverrides,
       stop_loss:   cfg.stop_loss,
       take_profit: cfg.take_profit,
+      trend_filter_strong_prob: cfg.trend_filter_strong_prob,
     })
     okMsg.value = '设置已保存 ✓  下次信号生成时生效'
     setTimeout(() => { okMsg.value = '' }, 4000)
