@@ -78,6 +78,15 @@
           <StatCard label="持仓品种" :value="(pf.positions?.length ?? 0) + ' 只'" />
         </div>
 
+        <!-- Today signal banner -->
+        <div class="px-6 pt-3">
+          <TodaySignalBanner
+            :signals="todaySignals"
+            :positions="pf?.positions ?? []"
+            @buy-signal="onBuySignal"
+          />
+        </div>
+
         <!-- Tab bar + content -->
         <div class="px-6 pt-5 pb-6">
           <div class="mb-5">
@@ -95,6 +104,7 @@
           <TransactionTab v-else-if="tab === 'transactions'"
                           :transactions="transactions" :pf="pf"
                           :sel-id="selId" :today-signals="todaySignals"
+                          :prefill="pendingSignal"
                           @refresh="reloadAll" />
 
           <!-- 账号设置 -->
@@ -241,8 +251,9 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { store } from '../store.js'
 import { api, fmtCash, fmtPct, todayStr } from '../api.js'
-import PositionTab     from '../components/PositionTab.vue'
-import TransactionTab  from '../components/TransactionTab.vue'
+import PositionTab        from '../components/PositionTab.vue'
+import TransactionTab     from '../components/TransactionTab.vue'
+import TodaySignalBanner  from '../components/TodaySignalBanner.vue'
 import BaseCard        from '../components/base/BaseCard.vue'
 import BaseButton      from '../components/base/BaseButton.vue'
 import Badge           from '../components/base/Badge.vue'
@@ -262,8 +273,9 @@ function avatarColor(name) {
 }
 
 // ── State ─────────────────────────────────────────────────────
-const selId       = ref(null)
-const tab         = ref('positions')
+const selId        = ref(null)
+const tab          = ref('positions')
+const pendingSignal = ref(null)
 const pf          = ref(null)
 const transactions = ref([])
 const todaySignals = ref([])
@@ -444,6 +456,13 @@ async function changePassword() {
     Object.assign(pwForm, { old: '', new1: '', new2: '' })
     pwMsg.value = { ok: true, text: '密码已修改 ✓' }
   } catch (e) { pwMsg.value = { ok: false, text: e.message } }
+}
+
+// ── Signal banner → transaction prefill ──────────────────────
+function onBuySignal(sig) {
+  tab.value = 'transactions'
+  pendingSignal.value = sig
+  setTimeout(() => { pendingSignal.value = null }, 0)
 }
 
 // ── Deposit ───────────────────────────────────────────────────

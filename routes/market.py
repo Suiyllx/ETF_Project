@@ -1,10 +1,39 @@
 """routes/market.py — 行情相关 API（实时价、ETF 列表、历史 K 线）"""
 
+import math
+import threading
+import time
+
 from flask import Blueprint, jsonify
 
 from routes._shared import require_auth
 
 market_bp = Blueprint("market", __name__)
+
+# ── ETF 实时快照缓存（akshare 全量拉取约 15s，缓 60s 避免频繁等待）──
+_snap_cache: dict = {"df": None, "ts": 0.0}
+_snap_lock = threading.Lock()
+_SNAP_TTL = 60  # seconds
+
+
+def _fetch_etf_snapshot():
+    """返回 akshare fund_etf_spot_em() 结果，60s 内复用缓存。"""
+    import akshare as ak
+    now = time.time()
+    with _snap_lock:
+        if _snap_cache["df"] is None or now - _snap_cache["ts"] > _SNAP_TTL:
+            _snap_cache["df"] = ak.fund_etf_spot_em()
+            _snap_cache["ts"] = time.time()
+        return _snap_cache["df"]
+
+
+def _sf(val, digits=4):
+    """Safe float：NaN/Inf 转 None，否则 round。"""
+    try:
+        v = float(val)
+        return None if (math.isnan(v) or math.isinf(v)) else round(v, digits)
+    except Exception:
+        return None
 
 
 def _sina_code(code: str) -> str:
@@ -67,6 +96,55 @@ def api_realtime_price(code):
         pass
 
     return jsonify({"error": "无法获取行情"}), 404
+
+
+@market_bp.get("/api/realtime-snapshot/<code>")
+@require_auth
+def api_realtime_snapshot(code):
+    """
+    返回单只 ETF 的实时盘口数据（IOPV、委比、主力净流入、外内盘等）。
+    数据来源：akshare fund_etf_spot_em()，后端缓存 60s。
+    """
+    try:
+        df = _fetch_etf_snapshot()
+    except Exception as e:
+        return jsonify({"error": f"行情拉取失败：{e}"}), 503
+
+    row = df[df["代码"] == code]
+    if row.empty:
+        return jsonify({"error": "未在实时数据中找到该 ETF"}), 404
+
+    r = row.iloc[0]
+
+    outer = _sf(r.get("外盘"))
+    inner = _sf(r.get("内盘"))
+    outer_inner = round(outer / inner, 2) if (outer and inner and inner != 0) else None
+
+    # 折溢价符号说明：akshare 基金折价率 = (IOPV - 市价) / 市价 × 100
+    # 正数 = 折价（市价低于 IOPV）；负数 = 溢价（市价高于 IOPV）
+    premium_rt = _sf(r.get("基金折价率"))
+
+    cache_age = round(time.time() - _snap_cache["ts"])
+
+    return jsonify({
+        "code":            code,
+        "name":            str(r.get("名称", "")),
+        "price":           _sf(r.get("最新价")),
+        "iopv":            _sf(r.get("IOPV实时估值")),
+        "premium_rt":      premium_rt,   # 正=折价/负=溢价
+        "pct_chg":         _sf(r.get("涨跌幅")),
+        "vol_ratio":       _sf(r.get("量比"), 2),
+        "wei_bi":          _sf(r.get("委比"), 2),
+        "main_net_inflow": _sf(r.get("主力净流入-净额"), 0),
+        "main_net_pct":    _sf(r.get("主力净流入-净占比"), 2),
+        "outer":           outer,
+        "inner":           inner,
+        "outer_inner":     outer_inner,
+        "turnover":        _sf(r.get("换手率"), 2),
+        "amount":          _sf(r.get("成交额"), 0),
+        "update_time":     str(r.get("更新时间", "")),
+        "cache_age_s":     cache_age,
+    })
 
 
 @market_bp.get("/api/etf-list")

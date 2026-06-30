@@ -208,6 +208,9 @@
           </div>
         </BaseCard>
 
+        <!-- ── Realtime panel ── -->
+        <RealtimePanel :code="selCode" />
+
         <!-- ── Controls ── -->
         <BaseCard class="px-5 py-3 flex items-center justify-between flex-wrap gap-3">
           <div class="flex gap-1">
@@ -461,8 +464,9 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import Chart from 'chart.js/auto'
 import { api } from '../api.js'
 import { store } from '../store.js'
-import BaseCard from '../components/base/BaseCard.vue'
-import Badge    from '../components/base/Badge.vue'
+import BaseCard      from '../components/base/BaseCard.vue'
+import Badge         from '../components/base/Badge.vue'
+import RealtimePanel from '../components/RealtimePanel.vue'
 import {
   Star, Wallet, Radar, ChevronDown, ChevronRight, LineChart, Loader2, BookOpen, Lightbulb,
 } from '@lucide/vue'

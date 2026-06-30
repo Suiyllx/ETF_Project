@@ -170,6 +170,7 @@ const props = defineProps({
   pf:           { type: Object, required: true },
   selId:        { type: String, required: true },
   todaySignals: { type: Array, default: () => [] },
+  prefill:      { type: Object, default: null },
 })
 const emit = defineEmits(['refresh'])
 
@@ -180,6 +181,18 @@ const form = reactive({
   date: todayStr(), action: 'buy',
   etf_code: '', etf_name: '', shares: '', price: '', note: '',
 })
+
+// 来自信号简报的预填：切换到交易 Tab 时自动打开弹窗并填好 ETF
+watch(() => props.prefill, (sig) => {
+  if (!sig) return
+  Object.assign(form, {
+    date: todayStr(), action: 'buy',
+    etf_code: sig.code, etf_name: sig.name,
+    shares: '', price: '', note: '按信号建仓',
+  })
+  priceSource.value = ''
+  showModal.value = true
+}, { immediate: true })
 
 const txAmount = computed(() => {
   const s = Number(form.shares), p = Number(form.price)
