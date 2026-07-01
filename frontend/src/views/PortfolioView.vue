@@ -65,7 +65,7 @@
         </BaseCard>
 
         <!-- Metric cards -->
-        <div class="grid grid-cols-5 gap-3 px-6 pt-5">
+        <div class="grid grid-cols-6 gap-3 px-6 pt-5">
           <StatCard label="总资产" :value="fmtCash(totalAssets)" accent="blue" />
           <div class="relative">
             <StatCard label="可用现金" :value="fmtCash(pf.cash)" accent="green" />
@@ -75,6 +75,7 @@
           <StatCard label="持仓市值" :value="fmtCash(totalMarketValue)"
                     :delta="pricesLoading ? '行情加载中…' : '按实时价估算'" trend="neutral" />
           <StatCard label="总浮盈" :value="pricesLoading ? '…' : fmtProfit(totalProfit)" :accent="profitAccent" />
+          <StatCard label="累计实现盈亏" :value="fmtProfit(totalRealizedPnl)" :accent="realizedPnlAccent" />
           <StatCard label="持仓品种" :value="(pf.positions?.length ?? 0) + ' 只'" />
         </div>
 
@@ -85,6 +86,30 @@
             :positions="pf?.positions ?? []"
             @buy-signal="onBuySignal"
           />
+        </div>
+
+        <!-- Allocation overview -->
+        <div class="px-6 pt-3 flex gap-4 items-start">
+          <div class="w-[55%]">
+            <AllocationCard
+              :positions="pf?.positions ?? []"
+              :total-assets="totalAssets"
+              :market-prices="marketPrices"
+              :categories="store.etfCategories"
+              :max-position-pct="pf?.max_position_pct ?? 0.30"
+              :max-sector-pct="pf?.max_sector_pct ?? 0.50"
+            />
+          </div>
+          <div class="flex-1 min-w-0">
+            <AllocationAdviceCard
+              :positions="pf?.positions ?? []"
+              :total-assets="totalAssets"
+              :market-prices="marketPrices"
+              :categories="store.etfCategories"
+              :max-position-pct="pf?.max_position_pct ?? 0.30"
+              :max-sector-pct="pf?.max_sector_pct ?? 0.50"
+            />
+          </div>
         </div>
 
         <!-- Tab bar + content -->
@@ -106,6 +131,9 @@
                           :sel-id="selId" :today-signals="todaySignals"
                           :prefill="pendingSignal"
                           @refresh="reloadAll" />
+
+          <!-- 收益曲线 -->
+          <AssetTrendTab v-else-if="tab === 'trend'" />
 
           <!-- 账号设置 -->
           <div v-else-if="tab === 'settings'" class="grid grid-cols-2 gap-4">
@@ -253,7 +281,10 @@ import { store } from '../store.js'
 import { api, fmtCash, fmtPct, todayStr } from '../api.js'
 import PositionTab        from '../components/PositionTab.vue'
 import TransactionTab     from '../components/TransactionTab.vue'
+import AssetTrendTab      from '../components/AssetTrendTab.vue'
 import TodaySignalBanner  from '../components/TodaySignalBanner.vue'
+import AllocationCard     from '../components/AllocationCard.vue'
+import AllocationAdviceCard from '../components/AllocationAdviceCard.vue'
 import BaseCard        from '../components/base/BaseCard.vue'
 import BaseButton      from '../components/base/BaseButton.vue'
 import Badge           from '../components/base/Badge.vue'
@@ -264,6 +295,7 @@ import { Plus, ArrowLeft, X } from '@lucide/vue'
 const TABS = [
   { key: 'positions',    label: '持仓明细' },
   { key: 'transactions', label: '交易记录' },
+  { key: 'trend',        label: '收益曲线' },
   { key: 'settings',     label: '账号设置' },
 ]
 
@@ -313,6 +345,14 @@ const totalAssets = computed(() => (pf.value?.cash ?? 0) + totalMarketValue.valu
 const profitAccent = computed(() => {
   if (pricesLoading.value || !Object.keys(marketPrices.value).length) return ''
   return totalProfit.value >= 0 ? 'green' : 'red'
+})
+const totalRealizedPnl = computed(() =>
+  (transactions.value ?? []).reduce((s, t) => s + (t.action === 'sell' && t.realized_pnl != null ? t.realized_pnl : 0), 0)
+)
+const realizedPnlAccent = computed(() => {
+  const sellTxs = (transactions.value ?? []).filter(t => t.action === 'sell' && t.realized_pnl != null)
+  if (!sellTxs.length) return ''
+  return totalRealizedPnl.value >= 0 ? 'green' : 'red'
 })
 
 function fmtProfit(v) {

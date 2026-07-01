@@ -119,6 +119,22 @@ def update_data(code: str) -> pd.DataFrame:
     return combined
 
 
+def build_full_price_map() -> dict[str, float]:
+    """
+    读取全部 ETF（含未触发信号的）本地最新收盘价，供资产快照等需要精确估值的场景使用。
+    需在 generate_signals() 运行之后调用（该函数已为每只 ETF 增量更新过当日行情）。
+    """
+    price_map = {}
+    for code in ETF_CODES:
+        try:
+            df = load_hist(code)
+            if not df.empty:
+                price_map[code] = float(df.iloc[-1]["close"])
+        except Exception:
+            pass
+    return price_map
+
+
 def generate_signals(forward: int = FORWARD_DAYS,
                      prob_threshold: float | None = None) -> list[dict]:
     """

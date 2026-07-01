@@ -25,6 +25,7 @@ EMAIL_LOG_FILE       = ROOT / "logs" / "email_log.jsonl"
 MODEL_CONFIG_FILE    = ROOT / "quant" / "signals" / "model_config.json"
 THRESHOLD_FILE       = ROOT / "quant" / "signals" / "thresholds.json"
 SIGNAL_HISTORY_DIR   = ROOT / "quant" / "signals" / "history"
+ASSET_HISTORY_FILE   = ROOT / "quant" / "signals" / "asset_history.json"
 DIST_DIR             = ROOT / "static" / "dist"
 
 # ── 模型配置 ───────────────────────────────────────────────────
@@ -125,6 +126,18 @@ def _check_portfolio_access(user_id: str):
     if me.get("role") != "admin" and me["id"] != user_id:
         return None, (jsonify({"error": "forbidden"}), 403)
     return user, None
+
+
+# ── 资产走势快照 I/O（B6）───────────────────────────────────────
+
+def read_asset_history() -> dict:
+    """{ "2026-07-01": {"assets": {"suiy": 450000}, "benchmark": 3450.23}, ... }"""
+    if not ASSET_HISTORY_FILE.exists():
+        return {}
+    try:
+        return json.loads(ASSET_HISTORY_FILE.read_text("utf-8"))
+    except Exception:
+        return {}
 
 
 # ── 认证 ───────────────────────────────────────────────────────

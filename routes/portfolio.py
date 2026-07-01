@@ -11,6 +11,7 @@ from routes._shared import (
     read_users_raw, read_users, write_users, _safe_user,
     read_portfolio, write_portfolio,
     read_transactions, write_transactions,
+    read_asset_history,
     _check_portfolio_access,
 )
 
@@ -195,6 +196,28 @@ def api_delete_position(user_id, code):
     return "", 204
 
 
+# ── 资产走势（B6）──────────────────────────────────────────────
+
+@portfolio_bp.get("/api/asset-history")
+@require_auth
+def api_get_asset_history():
+    me      = get_current_user()
+    history = read_asset_history()
+    dates   = sorted(history.keys())
+
+    users = read_users()
+    if me.get("role") != "admin":
+        users = [u for u in users if u["id"] == me["id"]]
+    names = {u["id"]: u["name"] for u in users}
+
+    series = {
+        uid: [history[d].get("assets", {}).get(uid) for d in dates]
+        for uid in names
+    }
+    benchmark = [history[d].get("benchmark") for d in dates]
+    return jsonify({"dates": dates, "benchmark": benchmark, "series": series, "names": names})
+
+
 # ── 交易记录 ───────────────────────────────────────────────────
 
 @portfolio_bp.get("/api/transactions/<user_id>")
@@ -220,24 +243,29 @@ def api_create_transaction(user_id):
     price  = float(data.get("price",  0))
     amount = round(shares * price, 2)
 
+    pf  = read_portfolio(user)
+    pos = next((p for p in pf["positions"] if p["code"] == code), None)
+
+    realized_pnl = None
+    if action == "sell" and pos:
+        realized_pnl = round((price - float(pos["cost_price"])) * shares, 2)
+
     tx = {
-        "id":         f"tx_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:20]}",
-        "date":       data.get("date", datetime.now().strftime("%Y-%m-%d")),
-        "action":     action,
-        "etf_code":   code,
-        "etf_name":   name,
-        "shares":     shares,
-        "price":      price,
-        "amount":     amount,
-        "note":       data.get("note", ""),
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "id":           f"tx_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:20]}",
+        "date":         data.get("date", datetime.now().strftime("%Y-%m-%d")),
+        "action":       action,
+        "etf_code":     code,
+        "etf_name":     name,
+        "shares":       shares,
+        "price":        price,
+        "amount":       amount,
+        "realized_pnl": realized_pnl,
+        "note":         data.get("note", ""),
+        "created_at":   datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
     txs = read_transactions(user)
     txs.append(tx)
     write_transactions(user, txs)
-
-    pf  = read_portfolio(user)
-    pos = next((p for p in pf["positions"] if p["code"] == code), None)
 
     if action == "buy":
         pf["cash"] = round(pf.get("cash", 0) - amount, 2)

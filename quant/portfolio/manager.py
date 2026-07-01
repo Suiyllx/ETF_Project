@@ -21,12 +21,14 @@ manager.py
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 ROOT = Path(__file__).parent.parent.parent
 PORTFOLIOS_DIR = ROOT / "portfolios"
 USERS_FILE     = PORTFOLIOS_DIR / "users.json"
+ASSET_HISTORY_FILE = ROOT / "quant" / "signals" / "asset_history.json"
 
 DEFAULT_TAKE_PROFIT = 0.08
 DEFAULT_STOP_LOSS   = 0.05
@@ -338,3 +340,44 @@ def advise_all_users(signals: list[dict],
         results.append((user, advised, portfolio))
         print(f"  [{user.name}] 建议生成完成，持仓 {len(portfolio.positions)} 只")
     return results
+
+
+# ── 资产走势快照（B6）────────────────────────────────────────
+
+def _read_asset_history() -> dict:
+    if ASSET_HISTORY_FILE.exists():
+        try:
+            return json.loads(ASSET_HISTORY_FILE.read_text("utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _write_asset_history(history: dict) -> None:
+    ASSET_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ASSET_HISTORY_FILE.write_text(
+        json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def snapshot_asset_history(price_map: dict[str, float], date_str: str = None,
+                          benchmark_close: float = None) -> dict:
+    """
+    快照当前所有活跃用户的总资产（现金 + 持仓市值），追加写入 asset_history.json，
+    供持仓页「收益曲线」Tab 读取。price_map 应尽量覆盖全量ETF收盘价
+    （而非当日买入信号候选池的窄价格表），避免未在候选池中的持仓被错误地按成本价估值。
+    """
+    date_str = date_str or datetime.now().strftime("%Y-%m-%d")
+    users  = load_users()
+    assets = {}
+    for user in users:
+        portfolio = load_portfolio(user, price_map)
+        assets[user.id] = round(portfolio.total_value, 2)
+
+    history = _read_asset_history()
+    entry = {"assets": assets}
+    if benchmark_close is not None:
+        entry["benchmark"] = round(float(benchmark_close), 4)
+    history[date_str] = entry
+    _write_asset_history(history)
+    return entry

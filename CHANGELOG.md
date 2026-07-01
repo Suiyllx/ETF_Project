@@ -4,6 +4,36 @@
 
 ---
 
+## v1.9 · 2026-07-01（追加 3）
+
+**资产走势图（B6）**
+
+- **每日资产快照**：`run_daily.py` 新增 Step 6/6，收盘信号生成完成后读取全量 ETF（含未触发信号的持仓标的）当日收盘价，结合沪深300指数收盘点位（新增 `quant/data/tushare_client.py::get_index_daily` 封装 + `fetch_historical.py::fetch_index_close`），调用 `quant/portfolio/manager.py::snapshot_asset_history()` 计算各活跃用户「现金+持仓市值」总资产并追加写入 `quant/signals/asset_history.json`（按日期分组，运行时文件已 gitignore）
+- **新增 API** `GET /api/asset-history`：管理员返回全部用户的资产序列 + 沪深300 基准序列；普通用户仅返回自己的序列，避免越权查看他人资产
+- **持仓页新增「收益曲线」Tab**：`AssetTrendTab.vue`，Chart.js 折线图将各账户资产曲线与沪深300按各自首个数据点归一为累计收益率（%）对比展示，图例胶囊按钮可单独隐藏/显示某条曲线；历史数据从功能上线后开始逐日积累，不做回溯补录
+
+---
+
+## v1.9 · 2026-07-01（追加 2）
+
+**已实现盈亏追踪（B3）**
+
+- 后端 `POST /api/transactions/<user_id>`：卖出交易在扣减持仓前读取当前持仓成本价，计算 `realized_pnl = (卖价 − 加权均成本) × 股数`，随交易记录一并写入 `{user_id}.json` 的 transactions 数组（买入交易该字段为 `null`）
+- `TransactionTab.vue` 交易记录表新增「实现盈亏」列，正值绿色 / 负值红色，买入行显示「—」
+- `PortfolioView.vue` 顶部汇总区新增「累计实现盈亏」卡片（6 卡片布局），对当前账户全部卖出交易的 `realized_pnl` 求和，正负配色随总额变化
+
+---
+
+## v1.9 · 2026-07-01（追加 1）
+
+**持仓仓位可视化（B4 / B4a）**
+
+- **`AllocationCard.vue`**：持仓 Tab 新增板块分布圆环图（Chart.js，按 `store.etfCategories` 聚合宽基/行业/债券/商品等板块占比）+ 逐仓位权重进度条，超过 `max_position_pct` / `max_sector_pct` 阈值时变红提示
+- **`AllocationAdviceCard.vue`**：与 `AllocationCard` 并排显示，对超限仓位/板块给出文字建议（超限方向 + 建议减仓金额），全部达标时显示「暂无需调整」
+- 计算逻辑抽成 `frontend/src/composables/useAllocation.js`，供两个卡片共用；纯前端计算，未改动后端
+
+---
+
 ## v1.9 · 2026-06-30
 
 **持仓页信号简报**

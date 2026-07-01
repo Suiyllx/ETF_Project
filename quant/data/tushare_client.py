@@ -100,3 +100,11 @@ def rate_limited(limiter: RateLimiter):
 # ── 模块级公共接口 ────────────────────────────────────────────
 ts.set_token(config.TUSHARE_TOKEN)
 pro_bar = rate_limited(_limiter)(ts.pro_bar)
+
+_pro = ts.pro_api()
+
+def _index_daily_raw(**kwargs):
+    return _pro.index_daily(**kwargs)
+
+# 指数日线（如沪深300 ts_code="000300.SH"），用法与 pro_bar 一致，加了限速/超时/重试
+get_index_daily = rate_limited(_limiter)(_index_daily_raw)

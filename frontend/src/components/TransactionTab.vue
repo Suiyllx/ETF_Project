@@ -19,13 +19,14 @@
           <th class="px-5 py-3 text-right text-xs font-semibold text-label-2">数量</th>
           <th class="px-5 py-3 text-right text-xs font-semibold text-label-2">成交价</th>
           <th class="px-5 py-3 text-right text-xs font-semibold text-label-2">金额</th>
+          <th class="px-5 py-3 text-right text-xs font-semibold text-label-2">实现盈亏</th>
           <th class="px-5 py-3 text-left text-xs font-semibold text-label-2">备注</th>
           <th class="px-5 py-3"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!transactions.length">
-          <td colspan="8" class="text-center py-14 text-label-2">
+          <td colspan="9" class="text-center py-14 text-label-2">
             <ClipboardList :size="36" class="mx-auto mb-3 opacity-50" />
             <p class="font-medium text-label-1">暂无交易记录</p>
             <p class="text-xs mt-1">点击「新增交易」添加</p>
@@ -46,6 +47,10 @@
           <td class="px-5 py-3.5 text-right text-label-2">¥{{ tx.price.toFixed(3) }}</td>
           <td class="px-5 py-3.5 text-right font-semibold" :class="tx.action === 'sell' ? 'text-sys-green' : 'text-label-1'">
             {{ tx.action === 'sell' ? '+' : '' }}{{ fmtCash(tx.amount) }}
+          </td>
+          <td class="px-5 py-3.5 text-right font-semibold"
+              :class="tx.action === 'sell' && tx.realized_pnl != null ? (tx.realized_pnl >= 0 ? 'text-sys-green' : 'text-sys-red') : 'text-label-3'">
+            {{ tx.action === 'sell' && tx.realized_pnl != null ? (tx.realized_pnl >= 0 ? '+' : '') + fmtCash(tx.realized_pnl) : '—' }}
           </td>
           <td class="px-5 py-3.5 text-xs text-label-2 max-w-32 truncate">{{ tx.note || '—' }}</td>
           <td class="px-5 py-3.5 text-right">

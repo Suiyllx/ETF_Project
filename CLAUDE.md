@@ -1,7 +1,7 @@
 # ETF 量化管理平台 · 项目说明（供 Claude 读取）
 
 > 本文件供 AI 助手快速了解项目现状，请在每次重大改动后同步更新。
-> 最后更新：2026-06-28（前端 Apple 风格视觉重构 F1-F9 完成；构建产物移出 git，改为多人协作分支流程）
+> 最后更新：2026-07-01（B3 实现盈亏追踪 + B6 资产走势图完成）
 
 ---
 
@@ -56,7 +56,7 @@ git branch -d feature/xxx       # 合并后删除分支
 ```
 D:\AI_PROJECT\
 ├── web_app.py                  # Flask 入口（app 初始化、Blueprint 注册、SPA 路由）
-├── routes/                     # API Blueprint 拆分（E1，2026-06-24）
+├── routes/                     # API Blueprint 拆分
 │   ├── __init__.py
 │   ├── _shared.py              # 跨 Blueprint 共用：路径常量、read/write 帮助函数、认证装饰器
 │   ├── auth.py                 # /api/auth/*
@@ -64,11 +64,12 @@ D:\AI_PROJECT\
 │   ├── signals.py              # /api/signals /api/sell-signals /api/alerts /api/signal-history /api/paper-trades
 │   ├── admin.py                # /api/model-config /api/backtest /api/email-log /api/system-status
 │   └── market.py               # /api/realtime-price /api/etf-list /api/etf-history /api/watchlist
-├── run_daily.py                # 收盘后日任务入口（更新行情 → 生成买入信号 → 生成卖出信号 → 发邮件）
+├── run_daily.py                # 收盘后日任务入口（更新行情 → 生成买入信号 → 生成卖出信号 → 发邮件 → 快照用户资产/B6）
 ├── run_intraday.py             # 盘中监控入口（每 30 分钟由任务计划调用）
 ├── run_weekly.py               # 周任务（模型重训练）
 ├── run_monthly.py              # 月任务（Optuna 调参）
 ├── setup_scheduler.ps1         # 注册 Windows 任务计划（需管理员权限运行）
+├── sync_etf_names.py           # 一次性维护脚本：把持仓/交易记录里的 ETF 名字与 etf_list.py 最新名称对齐（未推送/未在服务器执行）
 ├── requirements.txt
 ├── config.py                   # 敏感配置（已 gitignore，不提交）
 ├── config.example.py           # 配置模板
@@ -76,14 +77,14 @@ D:\AI_PROJECT\
 │
 ├── quant/
 │   ├── data/
-│   │   ├── tushare_client.py           # Tushare Pro 统一封装（单例 + 限速 + 超时 + 重试，E4c）
+│   │   ├── tushare_client.py           # Tushare Pro 统一封装（单例 + 限速 + 超时 + 重试）
 │   │   ├── fetch_historical.py         # Tushare 拉取历史行情（调用 tushare_client）
 │   │   ├── realtime_monitor.py         # 新浪实时行情拉取
 │   │   └── historical/*.parquet        # 各 ETF 历史数据（已 gitignore）
 │   ├── features/
 │   │   └── engineer.py                 # 技术指标特征工程
 │   ├── models/
-│   │   ├── trainer.py                  # 模型训练（E4b：保存带日期版本，更新 active_models）
+│   │   ├── trainer.py                  # 模型训练（保存带日期版本，更新 active_models）
 │   │   ├── tuner.py                    # Optuna 超参调优
 │   │   └── saved/                      # 训练好的模型文件，如 lgbm_forward5_20260626.pkl（已 gitignore）
 │   ├── signals/
@@ -100,11 +101,12 @@ D:\AI_PROJECT\
 │   │   ├── alerts.json                 # 盘中价格告警（运行时，已 gitignore）
 │   │   ├── thresholds.json             # 止损止盈阈值（运行时，已 gitignore）
 │   │   ├── paper_trades.json           # 模拟盘记录（运行时，已 gitignore）
+│   │   ├── asset_history.json          # 每日资产快照（运行时，已 gitignore，B6）
 │   │   └── history/                    # 历史信号（运行时，已 gitignore）
 │   ├── backtest/
 │   │   └── runner.py
 │   ├── portfolio/
-│   │   └── manager.py                  # 持仓信号叠加逻辑，读取止损止盈配置
+│   │   └── manager.py                  # 持仓信号叠加逻辑，读取止损止盈配置；snapshot_asset_history() 每日资产快照（B6）
 │   └── utils/
 │       └── etf_list.py                 # ETF 代码名称映射
 │
@@ -117,7 +119,7 @@ D:\AI_PROJECT\
 │   └── assets/
 │
 ├── logs/                               # 运行日志（已 gitignore）
-│   ├── daily_YYYY-MM-DD.jsonl          # 日任务结构化日志（E4a，每阶段一行 JSON）
+│   ├── daily_YYYY-MM-DD.jsonl          # 日任务结构化日志（每阶段一行 JSON）
 │   └── email_log.jsonl                 # 邮件推送记录
 ├── reports/                            # 回测报告（已 gitignore）
 │
@@ -136,10 +138,15 @@ D:\AI_PROJECT\
     │   │   ├── SellSignalTab.vue        # 卖出信号 + 盘中价格告警 Tab
     │   │   ├── PaperTradeTab.vue        # 模拟盘胜率 Tab
     │   │   ├── PositionTab.vue          # 持仓明细表格（实时价/浮盈列、卖出信号 badge、快速加仓/减持气泡）+ 导入/编辑弹窗
-    │   │   └── TransactionTab.vue       # 交易记录表格 + 新增弹窗（含自动拉实时价）
+    │   │   ├── TransactionTab.vue       # 交易记录表格 + 新增弹窗（含自动拉实时价）
+    │   │   ├── AllocationCard.vue       # 持仓分布：板块圆环图 + 逐仓位权重进度条，超阈值变红
+    │   │   ├── AllocationAdviceCard.vue # 配比建议：超限仓位/板块的文字建议 + 建议减仓金额
+    │   │   └── AssetTrendTab.vue        # 收益曲线：多账户资产曲线 + 沪深300 基准，归一化累计收益率对比（B6）
+    │   ├── composables/
+    │   │   └── useAllocation.js         # 持仓权重/板块占比计算逻辑，AllocationCard 与 AllocationAdviceCard 共用
     │   └── views/
     │       ├── SignalView.vue           # 信号看板（含买入/卖出/历史/模拟盘/算法）
-    │       ├── PortfolioView.vue        # 持仓管理（切换账户时并发拉实时价 + 卖出信号；5 张汇总卡片）
+    │       ├── PortfolioView.vue        # 持仓管理（切换账户时并发拉实时价 + 卖出信号；6 张汇总卡片；含收益曲线 Tab）
     │       ├── ModelView.vue            # 模型调参（管理员）
     │       ├── EtfView.vue             # ETF 行情
     │       ├── BacktestView.vue         # 回测结果（管理员）
@@ -192,7 +199,7 @@ const TABS = [
 ]
 ```
 
-Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已拆分为独立子组件（E2a）。
+各 Tab 内容已拆分为独立子组件。
 
 ---
 
@@ -206,7 +213,7 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
   "stop_loss": 0.05,            // 止损线（浮亏 5% 触发卖出建议）
   "take_profit": 0.08,          // 止盈线（浮盈 8% 触发卖出建议）
   "sell_prob_threshold": 0.55,  // 模型看空阈值（prob_down > 55% 触发）
-  "active_models": {            // 当前激活模型版本（E4b，trainer.py 训练后自动写入）
+  "active_models": {            // 当前激活模型版本（trainer.py 训练后自动写入）
     "5": "lgbm_forward5_20260626.pkl"
   }
 }
@@ -260,14 +267,15 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
 - `GET/PUT /api/portfolio/<user_id>`
 - `POST    /api/portfolio/<user_id>/positions` — 导入初始持仓
 - `DELETE  /api/portfolio/<user_id>/positions/<code>`
-- `GET/POST /api/transactions/<user_id>`
+- `GET/POST /api/transactions/<user_id>` — 交易记录（卖出交易自动计算 `realized_pnl`，B3）
 - `DELETE   /api/transactions/<user_id>/<tx_id>`
+- `GET /api/asset-history` — 资产走势（B6）：管理员返回全部用户资产序列 + 沪深300 基准，普通用户仅返回自己的序列
 
 ### 模型配置（管理员）
 - `GET/PUT /api/model-config`
 - `POST    /api/model-config/recalibrate`
 
-### 模型版本管理（管理员，E4b）
+### 模型版本管理（管理员）
 - `GET  /api/model-versions` — 列出 saved/ 下所有版本文件，标记 is_active
 - `POST /api/model-versions/activate` — 将指定文件写入 active_models，即时生效
 
@@ -293,29 +301,18 @@ Tab 顺序已于 2026-06-24 修正（待办 #14 已完成）。各 Tab 内容已
 
 ## 十一、当前版本与待办
 
-**当前版本**：v1.8（2026-06-26）
+**当前版本**：v1.9（完整版本历史见 `CHANGELOG.md`；任务级明细见 `TODO.md`）
 
 **近期待办**（详见 TODO.md）：
-- [ ] **B3**：已实现盈亏追踪（卖出实现盈亏、累计汇总卡片）
-- [ ] **B4**：持仓仓位可视化（权重进度条 + 板块饼图）
 - [ ] **B5**：交易记录筛选 & 汇总
 
-**已完成**：
-- v1.5 卖出信号系统（2026-06-23）
-- **C1** ETF 票池扩充：`etf_list.py` 从 26 只扩至 61 只，新增银行/保险/AI/机器人/家电/食品饮料/化工/石油/创新药/医疗器械/北证50/中证2000 等 35 只，新增「海外」分类（中概互联/纳指100/恒生科技/标普500）（2026-06-24）
-- **C2** ETF 分类体系细化：11 分类（宽基/海外/金融/医疗/科技/能源/消费/周期/地产/债券/商品），`/api/etf-list` 新增 categories 字段，`store.etfCategories` 全局可用；行情页侧栏折叠分组、信号页分类筛选条（2026-06-24）
-- **C3** 历史数据补拉 & 模型重训练：`fetch_historical --skip-existing` 补拉新增 35 只（全成功），重训练后数据集 18,876→39,719 行（2.1×），信号覆盖量 26→61 只，激活模型 `lgbm_forward5_20260624.pkl`（2026-06-24）
-- **E1** 后端 Blueprint 拆分：`web_app.py` 951 行 → 94 行入口 + `routes/` 5 个 Blueprint（2026-06-24）
-- **E2a** SignalView.vue 子组件拆分：931→320 行，含 Tab 顺序修复（2026-06-24）
-- **E2b** PortfolioView.vue 子组件拆分：950→280 行（2026-06-24）
-- **E4a** 日任务错误恢复：`run_daily.py` 各阶段独立 try/except + 指数退避重试（3次，5→10→20s）+ 结构化日志 `logs/daily_YYYY-MM-DD.jsonl`（2026-06-24）
-- **E4b** 模型版本管理：`trainer.py` 保存带日期版本（`lgbm_forward5_YYYYMMDD.pkl`），`model_config.json` 新增 `active_models`，`/api/model-versions` + `ModelView` Section 04 支持一键激活/回滚（2026-06-24）
-- **E4c** Tushare 调用封装：新建 `quant/data/tushare_client.py` 单例（限速 0.5s/call + 超时 30s + 指数退避重试 3次），`fetch_historical.py` 和 `generator.py` 统一改用 `pro_bar()` 封装（2026-06-24）
-- **B1** 持仓明细实时价/浮盈：现价/现值/浮盈/浮盈% 4 列（绿涨红跌），顶部 5 张卡片（总资产/现金/持仓市值/总浮盈/品种）（2026-06-24）
-- **B1a** 卖出信号角标：PortfolioView 切换账户时并发拉 `/api/sell-signals`，ETF 名旁显示「止损/止盈/看空」badge（2026-06-24）
-- **B1b** 快速加仓/减持：操作列 +加仓/-减持 按钮，行内气泡表单（股数+价格+预览扣款/到账+现金变化），回车确认；底层调 `POST /api/transactions`（2026-06-24）
-- **B2** 交易→持仓联动：后端 `api_create_transaction` 已完整实现（持仓股数/均价/现金三联动），B1b 提供前端快捷入口（2026-06-24）
-- **C4** ETF 票池代码↔名称全量纠错：核查全部 61 只代码，修复 11 处错配——环保→稀土（516780）、北证50/白银实为黄金（159834/159812）、地产实为科技龙头（515000）、军工实为基建（516970）、央企改革实为央企创新（515600）、159806↔159869（网络安全/新能源车 实为 新能源车/动漫游戏，已对调）；石油/碳中和/储能 3 只原代码与主题完全不符，改用真实代码 561360/159790/159566（补拉历史数据），重训激活模型 `lgbm_forward5_20260626.pkl`（数据集 39,613 行）（2026-06-26）
+**最近完成**（2026-07-01）：
+- **B3** 已实现盈亏追踪：卖出交易在 `routes/portfolio.py::api_create_transaction` 中按卖出前加权均成本计算 `realized_pnl`；`TransactionTab.vue` 交易列表新增「实现盈亏」列；`PortfolioView.vue` 顶部新增「累计实现盈亏」汇总卡片。
+- **B4/B4a** 持仓配比可视化 + 建议：`PortfolioView.vue` 今日信号简报下方新增 `AllocationCard.vue`（板块圆环图 + 逐仓位权重进度条）与 `AllocationAdviceCard.vue`（超限仓位/板块文字建议），并排显示；计算逻辑共用 `frontend/src/composables/useAllocation.js`；纯前端计算，未改后端。
+- **B6** 资产走势图：`run_daily.py` 新增 Step 6/6 每日快照各用户总资产（含沪深300基准，需新增 `tushare_client.py::get_index_daily`），写入 `quant/signals/asset_history.json`；新增 `GET /api/asset-history`（按角色返回全部/自己的序列）；持仓页新增「收益曲线」Tab（`AssetTrendTab.vue`），归一化累计收益率对比多账户与基准。历史数据从今日起逐日积累，不做回溯补录。
+
+**已知遗留问题**：
+- `portfolios/{user}.json` 里的持仓 `name` 字段是导入/交易时写死的字符串，不会随 `etf_list.py` 改名自动同步（如 C4 的 516780 环保→稀土，服务器旧持仓记录仍显示旧名）。已写 `sync_etf_names.py` 一次性修复脚本（未推送/未在服务器执行）。
 
 ---
 

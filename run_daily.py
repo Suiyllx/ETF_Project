@@ -9,6 +9,7 @@ run_daily.py
   3. 生成卖出信号（扫描所有用户持仓）
   4. 加载用户列表
   5. 逐用户生成建议并推送邮件
+  6. 快照各用户总资产（现金+持仓市值）+ 沪深300 基准，供收益曲线 Tab 使用
 
 每个阶段独立 try/except + 指数退避重试，任意环节失败不阻断后续。
 结构化日志写入 logs/daily_YYYY-MM-DD.jsonl。
@@ -119,21 +120,22 @@ def main():
         sys.exit(0)
 
     # 延迟导入，避免模块级副作用影响启动
-    from quant.signals.generator   import generate_signals
+    from quant.signals.generator   import generate_signals, build_full_price_map
     from quant.signals.sell_generator import generate_sell_signals
     from quant.signals.notifier    import push_daily_report
     from quant.signals.calibrator  import calibrate
-    from quant.portfolio.manager   import load_users, advise_for_user
+    from quant.portfolio.manager   import load_users, advise_for_user, snapshot_asset_history
     from quant.models.trainer      import FORWARD_DAYS
+    from quant.data.fetch_historical import fetch_index_close
 
     stage_ok: dict[str, bool] = {}
 
     # ── 1. 校准动态阈值 ──────────────────────────────────────────────────────
-    print("Step 1/5  校准动态阈值...")
+    print("Step 1/6  校准动态阈值...")
     _, stage_ok["calibrate"] = run_with_retry(calibrate, "校准动态阈值")
 
     # ── 2. 全局生成做多信号候选池 ────────────────────────────────────────────
-    print("\nStep 2/5  生成做多信号候选池...")
+    print("\nStep 2/6  生成做多信号候选池...")
     signals, stage_ok["buy_signals"] = run_with_retry(
         lambda: generate_signals(forward=FORWARD_DAYS),
         "生成做多信号",
@@ -141,20 +143,20 @@ def main():
     price_map = {s["code"]: s["close"] for s in signals} if signals else {}
 
     # ── 3. 生成卖出信号 ──────────────────────────────────────────────────────
-    print("\nStep 3/5  生成卖出信号...")
+    print("\nStep 3/6  生成卖出信号...")
     sell_signals_by_user, stage_ok["sell_signals"] = run_with_retry(
         generate_sell_signals, "生成卖出信号",
     )
     sell_signals_by_user = sell_signals_by_user or {}
 
     # ── 4. 加载用户列表 ──────────────────────────────────────────────────────
-    print("\nStep 4/5  加载用户列表...")
+    print("\nStep 4/6  加载用户列表...")
     users, stage_ok["load_users"] = run_with_retry(load_users, "加载用户列表")
     if users:
         print(f"  找到 {len(users)} 个活跃用户")
 
     # ── 5. 逐用户推送 ────────────────────────────────────────────────────────
-    print("\nStep 5/5  生成建议并推送...\n")
+    print("\nStep 5/6  生成建议并推送...\n")
     users_ok:   list[str] = []
     users_fail: list[str] = []
 
@@ -192,6 +194,25 @@ def main():
                 base_delay=10.0,
             )
             (users_ok if ok else users_fail).append(user.name)
+
+    # ── 6. 快照资产走势 ──────────────────────────────────────────────────────
+    print("\nStep 6/6  快照用户总资产...")
+    if not stage_ok["buy_signals"] or not stage_ok["load_users"] or not users:
+        print("  [跳过] 做多信号或用户列表未就绪，无法快照资产。")
+        _write_log({"ts": datetime.now(BEIJING).isoformat(),
+                    "stage": "snapshot_assets", "status": "skip",
+                    "reason": "prerequisite_failed"})
+        stage_ok["snapshot_assets"] = False
+    else:
+        def _snapshot():
+            full_price_map = build_full_price_map()
+            date_str = run_ts.strftime("%Y-%m-%d")
+            benchmark = fetch_index_close("000300.SH", date_str)
+            return snapshot_asset_history(full_price_map, date_str, benchmark)
+
+        _, stage_ok["snapshot_assets"] = run_with_retry(
+            _snapshot, "快照用户总资产", max_retries=2, base_delay=5.0,
+        )
 
     # ── 汇总 ────────────────────────────────────────────────────────────────
     failed_stages = [k for k, v in stage_ok.items() if not v]

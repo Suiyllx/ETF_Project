@@ -115,6 +115,22 @@ def load(code: str) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+def fetch_index_close(ts_code: str, date_str: str) -> float | None:
+    """
+    获取指定交易日的指数收盘点位（如沪深300 ts_code="000300.SH"），
+    供资产走势图的基准对比使用。非交易日/无数据时返回 None。
+    """
+    from quant.data.tushare_client import get_index_daily
+    d = date_str.replace("-", "")
+    try:
+        df = get_index_daily(ts_code=ts_code, start_date=d, end_date=d)
+        if df is not None and not df.empty:
+            return float(df.iloc[0]["close"])
+    except Exception:
+        pass
+    return None
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--years",         type=int,  default=3,    help="拉取近几年数据")
